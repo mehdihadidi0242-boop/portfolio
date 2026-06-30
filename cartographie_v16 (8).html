@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cartographie des Processus v16</title>
+<style>
+  :root {
+    --beige:      #F5F0E8;
+    --beige-dark: #E8E0CC;
+    --vert:       #2D4A2D;
+    --vert-light: #4A7A4A;
+    --vert-pale:  #C8D8C8;
+    --or:         #7A5C10;
+    --or-light:   #C49A20;
+    --gris:       #444444;
+    --gris-light: #F0EDEA;
+    --blanc:      #FFFFFF;
+    --interact:   #8B1A1A;
+    --linked:     #E8F4E8;
+    --shadow:     rgba(45,74,45,0.15);
+    --bleu-nuit:  #1A2A4A;
+    --bleu-pale:  #D0D8E8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--beige);
+    font-family: Arial, Helvetica, sans-serif;
+    color: #111;
+    padding: 28px 24px 52px;
+    min-width: 1100px;
+  }
+
+  /* ── HEADER ── */
+  .header { text-align: center; margin-bottom: 20px; }
+  .header h1 {
+    font-family: Georgia, serif; font-size: 1.4rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em; color: var(--vert);
+  }
+  .header p { font-size: 0.76rem; color: #333; margin-top: 4px; letter-spacing: 0.05em; }
+  .header-line { width: 60px; height: 3px; background: var(--vert); margin: 8px auto 0; }
+
+  .hint { text-align: center; font-size: 0.66rem; color: #333; margin-bottom: 16px; }
+  .hint span { background: var(--beige-dark); padding: 4px 12px; border-radius: 10px; border: 1px solid #bbb; }
+
+  /* ── WRAPPER GLOBAL ── */
+  .wrapper {
+    max-width: 1400px; margin: 0 auto;
+    display: flex; flex-direction: column; gap: 0;
+  }
+
+  /* ── BLOC BESOINS / SATISFACTION ── */
+  .bloc-parties {
+    background: var(--bleu-nuit); color: var(--beige);
+    border: 2px solid var(--bleu-nuit); border-radius: 2px;
+    padding: 14px 20px; text-align: center;
+  }
+  .bloc-parties .titre {
+    font-family: Georgia, serif; font-size: 0.9rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .bloc-parties .sous-titre {
+    font-size: 0.64rem; margin-top: 4px; opacity: 0.8; letter-spacing: 0.05em;
+  }
+
+  /* ── FLÈCHES VERTICALES ENTRE BLOCS ── */
+  .fleches-row {
+    display: flex; align-items: flex-start;
+    padding: 0 0px;
+  }
+  .fleche-col {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; padding: 4px 0;
+    border-left: 1px solid transparent;
+  }
+  .fleche-shaft { width: 3px; height: 24px; background: var(--vert); }
+  .fleche-head {
+    width: 0; height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 10px solid var(--vert);
+  }
+  .fleche-label {
+    font-size: 0.52rem; color: #333; text-transform: uppercase;
+    letter-spacing: 0.06em; text-align: center; margin-top: 2px;
+  }
+
+  /* ── ZONE DES 3 COLONNES ── */
+  .colonnes {
+    display: flex; gap: 0;
+    border: 2px solid var(--vert); border-radius: 2px;
+    overflow: hidden;
+  }
+
+  /* ── COLONNE ── */
+  .col {
+    flex: 1; display: flex; flex-direction: column;
+    border-right: 2px solid var(--vert);
+    min-width: 0;
+  }
+  .col:last-child { border-right: none; }
+
+  /* EN-TÊTE COLONNE */
+  .col-header {
+    padding: 10px 12px; text-align: center;
+    border-bottom: 2px solid var(--vert);
+  }
+  .col-header .col-titre {
+    font-family: Georgia, serif; font-size: 0.78rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em; display: block;
+  }
+  .col-header .col-count {
+    font-size: 0.56rem; display: block; margin-top: 3px;
+  }
+
+  .col.management .col-header  { background: var(--vert); color: var(--beige); }
+  .col.management .col-count   { color: var(--vert-pale); }
+  .col.operationnel .col-header { background: var(--or); color: var(--beige); }
+  .col.operationnel .col-count  { color: #e8d08a; }
+  .col.support .col-header      { background: var(--beige-dark); color: var(--vert); }
+
+  /* CONTENU COLONNE */
+  .col-content {
+    flex: 1; display: flex; flex-direction: column;
+    gap: 8px; padding: 10px; background: var(--blanc);
+  }
+
+  /* BANDE INTERACTION */
+  .interact-row {
+    display: flex; align-items: center; justify-content: center;
+    gap: 4px; padding: 6px 8px;
+    background: #EDE8DC; border-top: 1px dashed #aaa; border-bottom: 1px dashed #aaa;
+    font-size: 0.52rem; color: #333; text-align: center;
+  }
+  .interact-arrow { font-size: 0.9rem; color: var(--vert); }
+
+  /* ── CARTES ── */
+  .card {
+    background: var(--blanc); border: 1.5px solid var(--beige-dark);
+    border-radius: 2px; padding: 9px 11px; cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s, background 0.15s;
+    position: relative; overflow: hidden; user-select: none;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%;
+  }
+  .col.management .card::before   { background: var(--vert); }
+  .col.management .card:hover      { border-color: var(--vert); }
+  .col.operationnel .card::before  { background: var(--or-light); }
+  .col.operationnel .card:hover    { border-color: var(--or-light); }
+  .col.support .card::before       { background: var(--gris); }
+  .col.support .card:hover         { border-color: var(--gris); }
+
+  .card.active {
+    border-color: var(--interact) !important;
+    background: #FFF8F8 !important;
+    box-shadow: 0 0 0 2px var(--interact), 0 4px 12px var(--shadow);
+    transform: translateY(-2px);
+  }
+  .card.linked {
+    border-color: var(--vert-light) !important;
+    background: var(--linked) !important;
+    box-shadow: 0 0 0 2px var(--vert-light);
+  }
+  .card.dimmed { opacity: 0.3; }
+
+  .card-id {
+    font-size: 0.56rem; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; margin-bottom: 4px;
+  }
+  .col.management .card-id   { color: var(--vert-light); }
+  .col.operationnel .card-id { color: var(--or); }
+  .col.support .card-id      { color: var(--gris); }
+
+  .card-title {
+    font-family: Georgia, serif; font-size: 0.66rem; font-weight: 700;
+    line-height: 1.35; color: var(--vert); margin-bottom: 7px;
+  }
+  .card-agents { display: none; }
+  .agent-tag {
+    font-size: 0.48rem; font-weight: 700; letter-spacing: 0.03em;
+    padding: 2px 5px; border-radius: 1px; text-transform: uppercase;
+  }
+  .col.management .agent-tag  { background: var(--vert); color: var(--beige); }
+  .col.operationnel .agent-tag { background: var(--or); color: var(--beige); }
+  .col.support .agent-tag      { background: #444; color: var(--beige); }
+
+  .sipoc-btn {
+    display: inline-block; margin-top: 4px;
+    font-size: 0.48rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; padding: 2px 7px;
+    background: var(--or-light); color: var(--beige);
+    border: none; border-radius: 1px; cursor: pointer;
+    font-family: Arial, sans-serif; transition: background 0.15s;
+  }
+  .sipoc-btn:hover { background: var(--or); }
+
+  .pending-badge {
+    display: inline-block; margin-top: 4px;
+    font-size: 0.46rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; padding: 2px 6px;
+    background: var(--beige-dark); color: var(--gris); border-radius: 1px;
+  }
+
+  /* PANNEAU DÉTAIL */
+  .bottom-row { display: flex; gap: 12px; max-width: 1400px; margin: 12px auto 0; }
+  .detail-panel {
+    width: 260px; min-width: 260px; background: var(--blanc);
+    border: 2px solid var(--vert); border-radius: 2px; padding: 14px;
+    display: flex; flex-direction: column;
+  }
+  .detail-panel h3 {
+    font-family: Georgia, serif; font-size: 0.7rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em; color: var(--vert);
+    margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--beige-dark);
+  }
+  .panel-empty {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 8px;
+    color: var(--gris); text-align: center;
+  }
+  .panel-empty .empty-icon { font-size: 1.5rem; opacity: 0.35; }
+  .panel-empty p { font-size: 0.62rem; line-height: 1.5; opacity: 0.65; }
+
+  .panel-content { display: none; flex-direction: column; flex: 1; }
+  .panel-content.visible { display: flex; }
+  .panel-id { font-size: 0.54rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--interact); margin-bottom: 3px; }
+  .panel-title { font-family: Georgia, serif; font-size: 0.7rem; font-weight: 700; color: var(--vert); line-height: 1.3; margin-bottom: 5px; }
+  .panel-desc { font-size: 0.6rem; color: #333; line-height: 1.45; padding-bottom: 9px; border-bottom: 1px solid var(--beige-dark); }
+  .links-title { font-size: 0.56rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--vert); margin: 9px 0 7px; }
+
+  .link-item {
+    background: var(--beige); border-left: 3px solid var(--interact);
+    padding: 6px 8px; margin-bottom: 6px; border-radius: 1px;
+  }
+  .link-item:last-child { margin-bottom: 0; }
+  .link-flow { display: flex; align-items: center; gap: 4px; margin-bottom: 3px; flex-wrap: wrap; }
+  .flow-tag {
+    font-size: 0.5rem; font-weight: 700; padding: 2px 5px;
+    border-radius: 1px; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .flow-tag.pm { background: var(--vert); color: var(--beige); }
+  .flow-tag.po { background: var(--or); color: var(--beige); }
+  .flow-tag.ps { background: #444; color: var(--beige); }
+  .flow-arrow { font-size: 0.7rem; color: var(--interact); font-weight: 700; }
+  .link-desc { font-size: 0.57rem; color: #333; line-height: 1.4; }
+  .link-type { font-size: 0.48rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--interact); font-weight: 700; margin-bottom: 2px; }
+
+  /* LÉGENDE & FOOTER */
+  .legend { display: flex; gap: 18px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.62rem; color: #222; text-transform: uppercase; letter-spacing: 0.06em; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .legend-box { width: 13px; height: 9px; border-radius: 1px; }
+
+  .footer-wrap {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 10px; max-width: 1400px; margin-left: auto; margin-right: auto;
+  }
+  .footer-note { font-size: 0.6rem; color: #222; letter-spacing: 0.04em; }
+  .footer-btn {
+    font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+    padding: 5px 14px; background: var(--vert); color: var(--beige);
+    border: none; border-radius: 2px; cursor: pointer; font-family: Arial, sans-serif;
+    transition: background 0.15s; white-space: nowrap;
+  }
+  .footer-btn:hover { background: var(--vert-light); }
+
+  /* BOUTON PARTIES PRENANTES (légende) */
+  .pp-btn {
+    font-size: 0.58rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; padding: 5px 12px; background: var(--bleu-nuit);
+    color: var(--beige); border: none; border-radius: 2px; cursor: pointer;
+    font-family: Arial, sans-serif; transition: opacity 0.15s; white-space: nowrap;
+    margin-left: auto;
+  }
+  .pp-btn:hover { opacity: 0.85; }
+
+  /* ── SIPOC FORMAT COLONNES VERTICALES ── */
+  .sipoc-grid {
+    display: flex; align-items: flex-start; justify-content: center;
+    gap: 60px; overflow-x: auto; padding: 8px;
+  }
+  .sipoc-col {
+    flex: 1; min-width: 145px; max-width: 210px;
+    display: flex; flex-direction: column; gap: 0;
+  }
+  .sipoc-head {
+    font-family: Georgia, serif; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    text-align: center; padding: 10px 6px; border-radius: 4px;
+    margin-bottom: 14px;
+  }
+  .sipoc-head .sh-en { font-size: 0.92rem; display: block; line-height: 1.1; }
+  .sipoc-head .sh-fr { font-size: 0.58rem; display: block; opacity: 0.85;
+    font-weight: 400; font-style: italic; margin-top: 2px; }
+  .sipoc-col-body {
+    display: flex; flex-direction: column; gap: 16px;
+    align-items: stretch;
+  }
+  .sipoc-bubble {
+    border-radius: 18px; padding: 8px 10px;
+    font-size: 0.62rem; font-weight: 600; color: #111;
+    text-align: center; line-height: 1.35;
+    min-height: 38px; display: flex; align-items: center;
+    justify-content: center;
+  }
+  .sipoc-connector {
+    align-self: center; font-size: 1.6rem; color: #9E9E9E;
+    font-weight: 700; padding: 0 4px; margin-top: 40px;
+    flex: 0 0 auto;
+  }
+  .sipoc-varrow {
+    text-align: center; font-size: 0.7rem; line-height: 1;
+    margin: -2px 0;
+  }
+  .sipoc-endcap {
+    border-radius: 4px; padding: 5px 8px;
+    font-size: 0.6rem; font-weight: 700; text-align: center;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+
+  /* TOOLTIP */
+  #descTip {
+    display: none; position: fixed; background: var(--vert); color: var(--beige);
+    padding: 9px 13px; border-radius: 2px; font-size: 0.66rem; line-height: 1.5;
+    max-width: 300px; z-index: 200; box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+    pointer-events: none; font-family: Arial, sans-serif;
+  }
+  #descTip strong { display: block; font-family: Georgia, serif; font-size: 0.7rem; margin-bottom: 4px; }
+
+  /* MODALES */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55); z-index: 500;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-box {
+    background: var(--beige); border: 2px solid var(--vert); border-radius: 2px;
+    width: 100%; max-height: 90vh; display: flex; flex-direction: column;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.3);
+  }
+  .modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 16px; background: var(--vert);
+  }
+  .modal-header span { font-family: Georgia, serif; font-size: 0.78rem; font-weight: 700; color: var(--beige); text-transform: uppercase; letter-spacing: 0.08em; }
+  .modal-close { background: none; border: none; color: var(--beige); font-size: 1.2rem; cursor: pointer; padding: 0 4px; line-height: 1; }
+  .modal-body { overflow-y: auto; padding: 20px; flex: 1; }
+
+  /* SIPOC DANS MODALE */
+  .ms-table { width: 100%; border-collapse: collapse; border: 2px solid var(--vert); font-family: Arial, sans-serif; font-size: 0.66rem; }
+  .ms-th { padding: 10px 8px; text-align: center; border-right: 2px solid var(--vert); border-bottom: 2px solid var(--vert); }
+  .ms-th-s { background: var(--vert); color: var(--beige); }
+  .ms-th-i { background: #3D5C3D; color: var(--beige); }
+  .ms-th-p { background: var(--or); color: var(--beige); }
+  .ms-th-o { background: #5C7A2D; color: var(--beige); }
+  .ms-th-c { background: #3A3A6A; color: var(--beige); border-right: none; }
+  .ms-letter { display: block; font-family: Georgia, serif; font-size: 1.5rem; font-weight: 700; line-height: 1; }
+  .ms-word   { display: block; font-size: 0.56rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
+  .ms-trad   { display: block; font-size: 0.5rem; opacity: 0.8; }
+  .ms-td { padding: 9px 10px; border-right: 2px solid var(--vert); border-bottom: 1px solid var(--beige-dark); background: var(--blanc); vertical-align: middle; }
+  .ms-td.ms-p { background: #FDF6E3; }
+  .ms-td.ms-c { background: #F0F0F8; border-right: none; }
+  .ms-td.ms-alerte { background: #FFF0F0 !important; }
+  .ms-td.ms-empty { background: var(--gris-light); }
+  .ms-td.last-row { border-bottom: none; }
+  .ms-tag { display: inline-block; font-size: 0.44rem; font-weight: 700; padding: 1px 4px; border-radius: 1px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+  .ms-tag-s { background: var(--vert-pale); color: var(--vert); }
+  .ms-tag-i { background: #D8EAD8; color: #3D5C3D; }
+  .ms-tag-o { background: #E0F0C8; color: #3D5C0A; }
+  .ms-tag-c { background: #D8D8F0; color: #3A3A6A; }
+  .ms-tag-alerte { background: #FFE8E8; color: #8B1A1A; }
+  .ms-text { font-size: 0.64rem; font-weight: 600; color: var(--vert); line-height: 1.3; }
+  .ms-sub  { font-size: 0.55rem; color: #444; margin-top: 2px; line-height: 1.3; }
+  .ms-num  { font-family: Georgia, serif; font-size: 1rem; font-weight: 700; color: var(--or-light); min-width: 16px; line-height: 1; }
+  .ms-num-rouge { color: #8B1A1A; }
+
+  /* TABLEAU PRIORISATION */
+  .pri-table { width: 100%; border-collapse: collapse; border: 2px solid var(--vert); font-family: Arial, sans-serif; font-size: 0.66rem; }
+  .pri-th { padding: 9px 10px; background: var(--vert); color: var(--beige); text-align: left; border-right: 1px solid var(--vert-light); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.07em; }
+  .pri-th:last-child { border-right: none; }
+  .pri-td { padding: 9px 10px; border-right: 1px solid var(--beige-dark); border-bottom: 1px solid var(--beige-dark); vertical-align: middle; }
+  .pri-td:last-child { border-right: none; }
+  .pri-tr-1 { background: #FFF8F0; }
+  .pri-tr-2 { background: #FFFFF0; }
+  .pri-tr-3 { background: #F8FFF8; }
+
+  /* ── STRUCTURE BANDES HORIZONTALES ── */
+  .map-container {
+    max-width: 1400px; margin: 0 auto;
+    display: flex; align-items: stretch; gap: 0;
+  }
+
+  /* COLONNE LATÉRALE ENTRÉE/SORTIE */
+  .side-col {
+    width: 120px; min-width: 120px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: var(--bleu-nuit); color: var(--beige);
+    border-radius: 2px; padding: 12px 6px; gap: 6px;
+  }
+  .side-col .side-label {
+    font-family: Georgia, serif; font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em; text-align: center;
+    line-height: 1.4;
+  }
+  .side-col .side-arrow { font-size: 1.2rem; line-height: 1; }
+
+  /* FLÈCHE HORIZONTALE ENTRÉE/SORTIE */
+  .h-arrow {
+    width: 28px; min-width: 28px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; color: var(--vert); font-weight: 700;
+  }
+
+  /* ZONE CENTRALE 3 BANDES */
+  .bands-center {
+    flex: 1;
+    display: flex; flex-direction: column; gap: 6px;
+    border: none; overflow: visible;
+  }
+
+  /* BANDE */
+  .band {
+    display: flex; flex-direction: column;
+    border: 4px solid var(--vert); border-radius: 2px; overflow: hidden;
+  }
+
+  /* ÉTIQUETTE BANDE — AU-DESSUS */
+  .band-label {
+    display: flex; flex-direction: row;
+    align-items: center; justify-content: center;
+    padding: 10px 16px; border-bottom: 2px solid var(--vert);
+    width: 100%; gap: 12px;
+  }
+  .band-label .bl-titre {
+    font-family: Georgia, serif; font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  .band-label .bl-count { font-size: 0.58rem; opacity: 0.8; }
+
+  .band.management .band-label  { background: var(--vert); color: var(--beige); border-bottom-color: var(--vert); }
+  .band.management .bl-count    { color: var(--vert-pale); }
+  .band.operationnel .band-label { background: var(--or); color: var(--beige); border-bottom-color: var(--or); }
+  .band.operationnel .bl-count   { color: #e8d08a; }
+  .band.support .band-label      { background: #9E9E9E; color: #FFFFFF; border-bottom-color: #9E9E9E; }
+
+  /* Couleur des contours de bande selon la famille */
+  .band.management   { border-color: var(--vert); }
+  .band.operationnel { border-color: var(--or); }
+  .band.support      { border-color: #9E9E9E; }
+
+  /* FLÈCHE INTERACTION VERTICALE */
+  .v-interact { display: none; }
+
+  /* CONTENU BANDE */
+  .band-content {
+    display: flex; flex-wrap: nowrap;
+    gap: 12px; padding: 12px 16px; align-items: stretch;
+    background: var(--blanc); justify-content: center;
+  }
+
+  /* CARTES — réadaptées pour bandes horizontales */
+  .card {
+    background: var(--blanc); border: 1.5px solid var(--beige-dark);
+    border-radius: 2px; padding: 9px 11px; cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s, background 0.15s;
+    position: relative; overflow: hidden; user-select: none;
+    flex: 1; min-width: 160px; max-width: 220px; min-height: 90px;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%;
+  }
+  .band.management .card::before   { background: var(--vert); }
+  .band.management .card:hover      { border-color: var(--vert); }
+  .band.operationnel .card::before  { background: var(--or-light); }
+  .band.operationnel .card:hover    { border-color: var(--or-light); }
+  .band.support .card::before       { background: var(--gris); }
+  .band.support .card:hover         { border-color: var(--gris); }
+
+  .card.active {
+    border-color: var(--interact) !important;
+    background: #FFF8F8 !important;
+    box-shadow: 0 0 0 2px var(--interact), 0 4px 12px var(--shadow);
+    transform: translateY(-2px);
+  }
+  .card.linked {
+    border-color: var(--vert-light) !important;
+    background: var(--linked) !important;
+    box-shadow: 0 0 0 2px var(--vert-light);
+  }
+  .card.dimmed { opacity: 0.3; }
+
+  .card-id { font-size: 0.56rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 4px; }
+  .band.management .card-id   { color: var(--vert-light); }
+  .band.operationnel .card-id { color: var(--or); }
+  .band.support .card-id      { color: var(--gris); }
+
+  .card-title { font-family: Georgia, serif; font-size: 0.66rem; font-weight: 700; line-height: 1.35; color: var(--vert); margin-bottom: 4px; }
+  .card-agents { display: none; }
+  .agent-tag { font-size: 0.48rem; font-weight: 700; letter-spacing: 0.03em; padding: 2px 5px; border-radius: 1px; text-transform: uppercase; }
+  .band.management .agent-tag  { background: var(--vert); color: var(--beige); }
+  .band.operationnel .agent-tag { background: var(--or); color: var(--beige); }
+  .band.support .agent-tag      { background: #444; color: var(--beige); }
+
+  /* Masquer les interact-row internes des colonnes */
+  .band-content .interact-row { display: none; }
+
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Cartographie des Processus</h1>
+  <p>Section Approvisionnement — Service de l'Énergie Opérationnelle · Ministère des Armées</p>
+  <div class="header-line"></div>
+</div>
+
+<div class="hint">
+  <span>Survolez une carte pour sa description · Cliquez pour voir ses liens · SIPOC → pour le détail du processus</span>
+</div>
+
+
+<div class="map-container">
+
+  <!-- ENTRÉE -->
+  <div class="side-col">
+    <span class="side-label">Besoins des parties prenantes</span>
+  </div>
+  <div style="width:28px;min-width:28px;"></div>
+
+  <!-- BANDES CENTRALES -->
+  <div class="bands-center">
+
+    <!-- ══ MANAGEMENT ══ -->
+    <div class="band management">
+      <div class="band-label">
+        <span class="bl-titre">Processus Management</span>
+      </div>
+      <div class="band-content">
+        <div class="card" id="PM1" onclick="selectCard('PM1')" onmouseenter="showDesc('PM1')" onmouseleave="hideDesc()">
+          <div class="card-id">PM1</div>
+          <div class="card-title">Piloter la performance du processus</div>
+          <div class="card-agents"><span class="agent-tag">Resp. Pilotage</span><span class="agent-tag">Chef de Section</span></div>
+          <button class="sipoc-btn" onclick="event.stopPropagation();openSIPOC('PM1')">SIPOC →</button>
+        </div>
+        <div class="card" id="PM2" onclick="selectCard('PM2')" onmouseenter="showDesc('PM2')" onmouseleave="hideDesc()">
+          <div class="card-id">PM2</div>
+          <div class="card-title">Communiquer en interne et en externe</div>
+          <div class="card-agents"><span class="agent-tag">Chef de Section</span><span class="agent-tag">Resp. Pilotage</span><span class="agent-tag">Approvisionneur</span></div>
+          <button class="sipoc-btn" onclick="event.stopPropagation();openSIPOC('PM2')">SIPOC →</button>
+        </div>
+        <div class="card" id="PM3" onclick="selectCard('PM3')" onmouseenter="showDesc('PM3')" onmouseleave="hideDesc()">
+          <div class="card-id">PM3</div>
+          <div class="card-title">Arbitrer les situations non conformes ou non standards</div>
+          <div class="card-agents"><span class="agent-tag">Chef de Section</span><span class="agent-tag">Resp. Pilotage</span></div>
+          <button class="sipoc-btn" onclick="event.stopPropagation();openSIPOC('PM3')">SIPOC →</button>
+        </div>
+        <div class="card" id="PM4" onclick="selectCard('PM4')" onmouseenter="showDesc('PM4')" onmouseleave="hideDesc()">
+          <div class="card-id">PM4</div>
+          <div class="card-title">Gérer la contractualisation des achats sur marchés publics</div>
+          <div class="card-agents"><span class="agent-tag">Chef de Section</span></div>
+          <button class="sipoc-btn" onclick="event.stopPropagation();openSIPOC('PM4')">SIPOC →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ OPÉRATIONNEL ══ -->
+    <div class="band operationnel">
+      <div class="band-label">
+        <span class="bl-titre">Processus Opérationnel</span>
+      </div>
+      <div class="band-content" style="position:relative;min-height:320px;padding:16px;display:flex;flex-direction:column;gap:30px;">
+        <!-- SVG FLÈCHES -->
+        <svg id="fluxSVG" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;overflow:visible;">
+          <defs>
+            <marker id="arr-vert" markerWidth="8" markerHeight="8" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#2D4A2D"/>
+            </marker>
+          </defs>
+        </svg>
+        <!-- LIGNE 1 : PO1 · PO2 · PO3 -->
+        <div style="display:flex;gap:45px;margin-bottom:30px;position:relative;z-index:2;width:100%;justify-content:center;">
+          <div class="card" id="PO1" onclick="selectCard('PO1')" onmouseenter="showDesc('PO1')" onmouseleave="hideDesc()" style="flex:0 1 200px;max-width:200px;">
+            <div class="card-id">PO1</div>
+            <div class="card-title">Traiter les demandes d'approvisionnements</div>
+            <div class="card-agents"><span class="agent-tag">Appro. Polyvalent</span><span class="agent-tag">Appro. Filtres</span><span class="agent-tag">Appro. Marine</span><span class="agent-tag">Appro. Flexibles</span><span class="agent-tag">Gest. RR</span></div>
+            <button class="sipoc-btn" onclick="event.stopPropagation();openSIPOC('PO1')">SIPOC →</button>
+          </div>
+          <div class="card" id="PO2" onclick="selectCard('PO2')" onmouseenter="showDesc('PO2')" onmouseleave="hideDesc()" style="flex:0 1 200px;max-width:200px;">
+            <div class="card-id">PO2</div>
+            <div class="card-title">Gérer les stocks et les niveaux de réapprovisionnements</div>
+            <div class="card-agents"><span class="agent-tag">Resp. Pilotage ⚑</span><span class="agent-tag">Appro. Polyvalent</span><span class="agent-tag">Appro. Filtres</span><span class="agent-tag">Appro. Marine</span><span class="agent-tag">Appro. Flexibles</span><span class="agent-tag">Gest. RR</span></div>
+            <button class="sipoc-btn" onclick="event.stopPropagation();openSIPOC('PO2')">SIPOC →</button>
+          </div>
+          <div class="card" id="PO3" onclick="selectCard('PO3')" onmouseenter="showDesc('PO3')" onmouseleave="hideDesc()" style="flex:0 1 200px;max-width:200px;">
+            <div class="card-id">PO3</div>
+            <div class="card-title">Acheter / Approvisionner les ressources et les matériels</div>
+            <div class="card-agents"><span class="agent-tag">Appro. Polyvalent</span><span class="agent-tag">Appro. Filtres</span><span class="agent-tag">Appro. Marine</span><span class="agent-tag">Appro. Flexibles</span><span class="agent-tag">Gest. RR</span></div>
+            <button class="sipoc-btn" onclick="event.stopPropagation();openSIPOC('PO3')">SIPOC →</button>
+          </div>
+        </div>
+        <!-- LIGNE 2 : PO4 aligné sous PO2 -->
+        <div style="display:flex;gap:45px;position:relative;z-index:2;justify-content:center;">
+          <div style="flex:0 1 200px;max-width:200px;visibility:hidden;"></div>
+          <div class="card" id="PO4" onclick="selectCard('PO4')" onmouseenter="showDesc('PO4')" onmouseleave="hideDesc()" style="flex:0 1 200px;max-width:200px;margin-left:-40px;">
+            <div class="card-id">PO4</div>
+            <div class="card-title">Traiter et gérer les retours de matériels et des parties prenantes</div>
+            <div class="card-agents"><span class="agent-tag">Resp. Pilotage</span><span class="agent-tag">Réf. Tech. SCALP</span><span class="agent-tag">Appro. Polyvalent</span><span class="agent-tag">Appro. Filtres</span><span class="agent-tag">Appro. Marine</span><span class="agent-tag">Appro. Flexibles</span><span class="agent-tag">Gest. RR</span></div>
+            <button class="sipoc-btn" onclick="event.stopPropagation();openSIPOC('PO4')">SIPOC →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SUPPORT ══ -->
+    <div class="band support">
+      <div class="band-label">
+        <span class="bl-titre">Processus Support</span>
+      </div>
+      <div class="band-content">
+        <div class="card" id="PS1" onclick="selectCard('PS1')" onmouseenter="showDesc('PS1')" onmouseleave="hideDesc()">
+          <div class="card-id">PS1</div>
+          <div class="card-title">Créer et mettre à jour les procédures et modes opératoires</div>
+          <div class="card-agents"><span class="agent-tag">Chef de Section</span><span class="agent-tag">Resp. Pilotage</span><span class="agent-tag">Réf. Tech. SCALP</span></div>
+          <button class="sipoc-btn" onclick="event.stopPropagation();openSIPOC('PS1')">SIPOC →</button>
+        </div>
+        <div class="card" id="PS2" onclick="selectCard('PS2')" onmouseenter="showDesc('PS2')" onmouseleave="hideDesc()">
+          <div class="card-id">PS2</div>
+          <div class="card-title">Fiabiliser les données des SI métier</div>
+          <div class="card-agents"><span class="agent-tag">Chef de Section</span><span class="agent-tag">Adj. Chef Section</span><span class="agent-tag">Resp. Pilotage</span><span class="agent-tag">Réf. Tech. SCALP</span></div>
+          <button class="sipoc-btn" onclick="event.stopPropagation();openSIPOC('PS2')">SIPOC →</button>
+        </div>
+        <div class="card" id="PS3" onclick="selectCard('PS3')" onmouseenter="showDesc('PS3')" onmouseleave="hideDesc()">
+          <div class="card-id">PS3</div>
+          <div class="card-title">Gérer les ressources humaines</div>
+          <div class="card-agents"><span class="agent-tag">Chef de Section</span><span class="agent-tag">Adj. Chef Section</span></div>
+          <button class="sipoc-btn" onclick="event.stopPropagation();openSIPOC('PS3')">SIPOC →</button>
+        </div>
+        <div class="card" id="PS4" onclick="selectCard('PS4')" onmouseenter="showDesc('PS4')" onmouseleave="hideDesc()">
+          <div class="card-id">PS4</div>
+          <div class="card-title">Gérer le référentiel article et la documentation</div>
+          <div class="card-agents"><span class="agent-tag">Réf. Tech. SCALP</span><span class="agent-tag">Appro. Polyvalent</span><span class="agent-tag">Appro. Filtres</span><span class="agent-tag">Appro. Marine</span><span class="agent-tag">Appro. Flexibles</span><span class="agent-tag">Gest. RR</span></div>
+          <button class="sipoc-btn" onclick="event.stopPropagation();openSIPOC('PS4')">SIPOC →</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /bands-center -->
+
+  <div style="width:28px;min-width:28px;"></div>
+  <!-- SORTIE -->
+  <div class="side-col">
+    <span class="side-label">Satisfaction des parties prenantes</span>
+  </div>
+
+</div><!-- /map-container -->
+
+<!-- PANNEAU DÉTAIL + LÉGENDE -->
+<div class="bottom-row">
+  <div style="flex:1">
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--bleu-nuit)"></div>Parties prenantes</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--vert)"></div>Management</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--or)"></div>Opérationnel</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#444"></div>Support</div>
+      <div class="legend-item"><div class="legend-box" style="background:#FFF8F8;border:2px solid #8B1A1A"></div>Sélectionné</div>
+      <div class="legend-item"><div class="legend-box" style="background:var(--linked);border:2px solid var(--vert-light)"></div>Lié</div>
+      <div class="legend-item"><span style="font-size:0.8rem;color:var(--vert)">⚑</span>&nbsp;Rôle d'alerte/veille</div>
+      <button class="pp-btn" onclick="openParties()">Parties prenantes ↗</button>
+    </div>
+    <div class="footer-wrap">
+      <span class="footer-note">12 processus · Version 16 · Phase 3 Conception · Structure validée tuteur</span>
+      <button class="footer-btn" onclick="openPriorisation()">Tableau de priorisation ↗</button>
+    </div>
+  </div>
+  <div class="detail-panel">
+    <h3>Détail &amp; Liens</h3>
+    <div class="panel-empty" id="panelEmpty">
+      <span class="empty-icon">◈</span>
+      <p>Cliquez sur une activité pour afficher sa description et ses liens.</p>
+    </div>
+    <div class="panel-content" id="panelContent">
+      <div class="panel-id" id="panelId"></div>
+      <div class="panel-title" id="panelTitle"></div>
+      <div class="panel-desc" id="panelDesc"></div>
+      <div class="links-title">Liens avec d'autres activités</div>
+      <div id="panelLinks"></div>
+    </div>
+  </div>
+</div>
+
+<!-- TOOLTIP -->
+<div id="descTip"></div>
+
+<!-- MODALE PARTIES PRENANTES -->
+<div class="modal-overlay" id="partiesModal">
+  <div class="modal-box" style="max-width:780px;">
+    <div class="modal-header">
+      <span>Parties prenantes de la section</span>
+      <button class="modal-close" onclick="closeModal('partiesModal')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:20px 24px 24px;">
+
+      <p style="font-size:0.68rem;color:#333;margin-bottom:20px;line-height:1.6;">
+        Entités externes en interaction avec la section, identifiées à partir des SIPOC de chaque processus.
+        Le niveau de proximité reflète la fréquence et la criticité des échanges.
+        <br><span style="font-style:italic;opacity:0.75;">Survolez un acteur pour afficher son rôle.</span>
+      </p>
+
+      <!-- DIAGRAMME CONCENTRIQUE SVG -->
+      <svg id="ppSVG" viewBox="0 0 720 460" style="width:100%;display:block;margin-bottom:18px;" xmlns="http://www.w3.org/2000/svg">
+
+        <!-- Cercle 3 — périphérique -->
+        <ellipse cx="360" cy="228" rx="330" ry="200" fill="none" stroke="#C8D8C8" stroke-width="1" stroke-dasharray="6 4"/>
+        <!-- Cercle 2 — interface directe -->
+        <ellipse cx="360" cy="228" rx="230" ry="140" fill="none" stroke="#4A7A4A" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/>
+        <!-- Cercle 1 — noyau -->
+        <ellipse cx="360" cy="228" rx="105" ry="66" fill="#E8E0CC" stroke="#2D4A2D" stroke-width="1.5"/>
+
+        <!-- Labels de niveaux -->
+        <text x="686" y="112" font-family="Georgia,serif" font-size="9" fill="#4A7A4A" text-anchor="end" font-style="italic">Interface directe</text>
+        <text x="686" y="54" font-family="Georgia,serif" font-size="9" fill="#888" text-anchor="end" font-style="italic">Périphériques</text>
+
+        <!-- ── NOYAU ── -->
+        <rect x="302" y="202" width="116" height="52" rx="5" fill="#2D4A2D"/>
+        <text x="360" y="222" font-family="Georgia,serif" font-size="10" font-weight="700" fill="#F5F0E8" text-anchor="middle">Section Appro.</text>
+        <text x="360" y="237" font-family="Arial,sans-serif" font-size="8.5" fill="#C8D8C8" text-anchor="middle">Pilotage + Conduite</text>
+
+
+        <!-- ── CERCLE 2 — Interface directe ── -->
+
+        <!-- Hiérarchie — haut gauche -->
+        <g class="pp-node" data-role="Directives stratégiques · arbitrage · comptes-rendus (PM2, PM3, PS3)" style="cursor:pointer" onmouseenter="ppHover(this)" onmouseleave="ppLeave()">
+          <rect x="108" y="102" width="118" height="46" rx="4" fill="#1A2A4A"/>
+          <text x="167" y="120" font-family="Georgia,serif" font-size="10" font-weight="700" fill="#F5F0E8" text-anchor="middle">Hiérarchie</text>
+          <text x="167" y="134" font-family="Arial,sans-serif" font-size="8" fill="#D0D8E8" text-anchor="middle">Commandant · CEM · OPS</text>
+          <line x1="226" y1="131" x2="295" y2="188" stroke="#1A2A4A" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#pp-arr-bleu)"/>
+        </g>
+
+
+        <!-- Bureau Achat — haut droite -->
+        <g class="pp-node" data-role="Validation des marchés · modification · vétos (PM4, PO3)" style="cursor:pointer" onmouseenter="ppHover(this)" onmouseleave="ppLeave()">
+          <rect x="456" y="64" width="118" height="46" rx="4" fill="#1A2A4A"/>
+          <text x="515" y="82" font-family="Georgia,serif" font-size="10" font-weight="700" fill="#F5F0E8" text-anchor="middle">Bureau Achat</text>
+          <text x="515" y="96" font-family="Arial,sans-serif" font-size="8" fill="#D0D8E8" text-anchor="middle">Marchés publics</text>
+          <line x1="490" y1="110" x2="432" y2="180" stroke="#1A2A4A" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#pp-arr-bleu)"/>
+        </g>
+
+        <!-- CSL — droite -->
+        <g class="pp-node" data-role="Magasin central · réception physique des commandes · gestion des stocks (PO2, PO3)" style="cursor:pointer" onmouseenter="ppHover(this)" onmouseleave="ppLeave()">
+          <rect x="520" y="196" width="118" height="46" rx="4" fill="#1A2A4A"/>
+          <text x="579" y="214" font-family="Georgia,serif" font-size="10" font-weight="700" fill="#F5F0E8" text-anchor="middle">CSL</text>
+          <text x="579" y="228" font-family="Arial,sans-serif" font-size="8" fill="#D0D8E8" text-anchor="middle">Magasin central</text>
+          <line x1="520" y1="222" x2="467" y2="232" stroke="#1A2A4A" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#pp-arr-bleu)"/>
+        </g>
+
+        <!-- Dépôts / Unités — bas droite -->
+        <g class="pp-node" data-role="Bénéficiaires finaux · expriment les besoins · effectuent les retours (PO1, PO3, PO4)" style="cursor:pointer" onmouseenter="ppHover(this)" onmouseleave="ppLeave()">
+          <rect x="456" y="334" width="118" height="46" rx="4" fill="#1A2A4A"/>
+          <text x="515" y="352" font-family="Georgia,serif" font-size="10" font-weight="700" fill="#F5F0E8" text-anchor="middle">Dépôts / Unités</text>
+          <text x="515" y="366" font-family="Arial,sans-serif" font-size="8" fill="#D0D8E8" text-anchor="middle">Demandeurs · bénéficiaires</text>
+          <line x1="490" y1="334" x2="424" y2="294" stroke="#1A2A4A" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#pp-arr-bleu)"/>
+        </g>
+
+        <!-- Sections partenaires — bas gauche -->
+        <g class="pp-node" data-role="Échanges d'information · conseil · coordination interservices (PM2)" style="cursor:pointer" onmouseenter="ppHover(this)" onmouseleave="ppLeave()">
+          <rect x="108" y="334" width="118" height="46" rx="4" fill="#1A2A4A"/>
+          <text x="167" y="352" font-family="Georgia,serif" font-size="10" font-weight="700" fill="#F5F0E8" text-anchor="middle">Sections partenaires</text>
+          <text x="167" y="366" font-family="Arial,sans-serif" font-size="8" fill="#D0D8E8" text-anchor="middle">ASIL · GLB · ...</text>
+          <line x1="226" y1="349" x2="296" y2="296" stroke="#1A2A4A" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#pp-arr-bleu)"/>
+        </g>
+
+        <!-- ── CERCLE 3 — Périphériques ── -->
+
+        <!-- Fournisseurs externes — gauche milieu -->
+        <g class="pp-node" data-role="Fournisseurs de matériels sur marché ou hors marché · devis (PO3, PM4)" style="cursor:pointer" onmouseenter="ppHover(this)" onmouseleave="ppLeave()">
+          <rect x="14" y="196" width="118" height="46" rx="4" fill="#7A5C10"/>
+          <text x="73" y="214" font-family="Georgia,serif" font-size="10" font-weight="700" fill="#F5F0E8" text-anchor="middle">Fournisseurs ext.</text>
+          <text x="73" y="228" font-family="Arial,sans-serif" font-size="8" fill="#F5E8B0" text-anchor="middle">Marché · hors marché</text>
+          <line x1="132" y1="222" x2="255" y2="228" stroke="#7A5C10" stroke-width="1" stroke-dasharray="3 4" marker-end="url(#pp-arr-or)"/>
+        </g>
+
+        <!-- Autres armées — haut centre -->
+        <g class="pp-node" data-role="Échanges via NeMO · messagerie inter-armées (PM2)" style="cursor:pointer" onmouseenter="ppHover(this)" onmouseleave="ppLeave()">
+          <rect x="302" y="14" width="118" height="46" rx="4" fill="#7A5C10"/>
+          <text x="361" y="32" font-family="Georgia,serif" font-size="10" font-weight="700" fill="#F5F0E8" text-anchor="middle">Autres armées</text>
+          <text x="361" y="46" font-family="Arial,sans-serif" font-size="8" fill="#F5E8B0" text-anchor="middle">Marine · Armée de Terre</text>
+          <line x1="361" y1="60" x2="361" y2="88" stroke="#7A5C10" stroke-width="1" stroke-dasharray="3 4" marker-end="url(#pp-arr-or)"/>
+        </g>
+
+        <!-- Direction / hiérarchie supérieure — bas centre -->
+        <g class="pp-node" data-role="Autorité de tutelle · orientations stratégiques · sollicitations ponctuelles" style="cursor:pointer" onmouseenter="ppHover(this)" onmouseleave="ppLeave()">
+          <rect x="302" y="400" width="118" height="46" rx="4" fill="#7A5C10"/>
+          <text x="361" y="418" font-family="Georgia,serif" font-size="10" font-weight="700" fill="#F5F0E8" text-anchor="middle">ADS</text>
+          <text x="361" y="432" font-family="Arial,sans-serif" font-size="8" fill="#F5E8B0" text-anchor="middle">Armées · Direction · Service</text>
+          <line x1="361" y1="400" x2="361" y2="368" stroke="#7A5C10" stroke-width="1" stroke-dasharray="3 4" marker-end="url(#pp-arr-or)"/>
+        </g>
+
+        <!-- Marqueurs -->
+        <defs>
+          <marker id="pp-arr-bleu" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L6,3 z" fill="#1A2A4A"/>
+          </marker>
+          <marker id="pp-arr-or" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L6,3 z" fill="#7A5C10"/>
+          </marker>
+        </defs>
+
+      </svg>
+
+      <!-- INFO-BULLE RÔLE -->
+      <div id="ppRoleBox" style="height:36px;background:#F5F0E8;border:1px solid #C8D8C8;border-left:3px solid #2D4A2D;border-radius:3px;padding:9px 14px;font-size:0.68rem;color:#888;line-height:1.6;margin-bottom:12px;overflow:hidden;font-style:italic;">Survolez un acteur pour afficher son rôle dans les processus.</div>
+
+      <!-- LÉGENDE -->
+      <div style="display:flex;gap:22px;flex-wrap:wrap;font-size:0.62rem;color:#444;border-top:1px solid #E8E0CC;padding-top:12px;">
+        <span style="display:flex;align-items:center;gap:6px;">
+          <span style="display:inline-block;width:12px;height:12px;background:#2D4A2D;border-radius:2px;"></span>Noyau — Section Appro.
+        </span>
+        <span style="display:flex;align-items:center;gap:6px;">
+          <span style="display:inline-block;width:12px;height:12px;background:#1A2A4A;border-radius:2px;"></span>Interface directe (fréquent · critique)
+        </span>
+        <span style="display:flex;align-items:center;gap:6px;">
+          <span style="display:inline-block;width:12px;height:12px;background:#7A5C10;border-radius:2px;"></span>Périphérique (ponctuel · informé)
+        </span>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODALE SIPOC -->
+<div class="modal-overlay" id="sipocModal">
+  <div class="modal-box" style="max-width:1340px;">
+    <div class="modal-header">
+      <span>Détail du processus</span>
+      <button class="modal-close" onclick="closeModal('sipocModal')">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<!-- MODALE PRIORISATION -->
+<div class="modal-overlay" id="prioriModal">
+  <div class="modal-box" style="max-width:900px;">
+    <div class="modal-header">
+      <span>Tableau de priorisation des activités opérationnelles</span>
+      <button class="modal-close" onclick="closeModal('prioriModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.66rem;color:#333;margin-bottom:16px;line-height:1.5;">Priorisation établie à partir de deux critères terrain : le niveau de standardisation actuel et l'impact en cas de dysfonctionnement.</p>
+      <table class="pri-table">
+        <thead><tr>
+          <th class="pri-th">Priorité</th>
+          <th class="pri-th">Activité</th>
+          <th class="pri-th">Standardisation</th>
+          <th class="pri-th">Impact</th>
+          <th class="pri-th">Justification</th>
+        </tr></thead>
+        <tbody>
+          <tr class="pri-tr-1"><td class="pri-td" style="text-align:center;font-weight:700;font-size:0.8rem;">⭐ 1</td><td class="pri-td"><strong>PO2 — Gérer les stocks</strong></td><td class="pri-td" style="text-align:center;">🔴 Non standardisé</td><td class="pri-td" style="text-align:center;">🔴 Fort</td><td class="pri-td" style="font-size:0.6rem;color:#333;">Processus amont critique — défaillance crée un effet cascade sur PO1, PO3 et PM1</td></tr>
+          <tr class="pri-tr-1"><td class="pri-td" style="text-align:center;font-weight:700;font-size:0.8rem;">⭐ 1</td><td class="pri-td"><strong>PO1 — Traiter les demandes</strong></td><td class="pri-td" style="text-align:center;">🔴 Non standardisé</td><td class="pri-td" style="text-align:center;">🔴 Fort</td><td class="pri-td" style="font-size:0.6rem;color:#333;">Priorisation variable, contournements informels, risque de rupture selon criticité</td></tr>
+          <tr class="pri-tr-2"><td class="pri-td" style="text-align:center;font-weight:700;font-size:0.8rem;">2</td><td class="pri-td"><strong>PO3 — Acheter / Approvisionner</strong></td><td class="pri-td" style="text-align:center;">🔴 Non standardisé</td><td class="pri-td" style="text-align:center;">🟠 Moyen</td><td class="pri-td" style="font-size:0.6rem;color:#333;">Savoir-faire individuel par article — risque de perte de connaissance</td></tr>
+          <tr class="pri-tr-3"><td class="pri-td" style="text-align:center;font-weight:700;font-size:0.8rem;">3</td><td class="pri-td"><strong>PO4 — Distribuer et suivre</strong></td><td class="pri-td" style="text-align:center;">🟠 Partiel</td><td class="pri-td" style="text-align:center;">🟠 Moyen</td><td class="pri-td" style="font-size:0.6rem;color:#333;">Pratiques convergentes via SIM@T mais non formalisées</td></tr>
+          <tr class="pri-tr-3"><td class="pri-td" style="text-align:center;font-weight:700;font-size:0.8rem;">3</td><td class="pri-td"><strong>PO3 — Passer les commandes</strong></td><td class="pri-td" style="text-align:center;">🟠 Partiel</td><td class="pri-td" style="text-align:center;">🟠 Moyen</td><td class="pri-td" style="font-size:0.6rem;color:#333;">Mode opératoire existant mais appropriation inégale</td></tr>
+        </tbody>
+      </table>
+      <div style="margin-top:12px;font-size:0.58rem;color:#333;display:flex;gap:20px;flex-wrap:wrap;">
+        <span>🔴 Non standardisé / Fort</span><span>🟠 Partiellement standardisé / Moyen</span><span>🟢 Standardisé / Faible</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DATA = {
+  PM1: { id:'PM1', type:'pm', title:'Piloter la performance du processus',
+    desc:'Construire et mettre à jour les indicateurs ainsi que le plan d\'approvisionnement à partir des données produites par les processus opérationnels et support.',
+    agents:['Resp. Pilotage','Chef de Section'], outils:['Excel','SIM@T','SCALP'],
+    links:[
+      {to:'PO1',type:'Management → Opérationnel',arrow:'→',desc:'Les orientations du plan d\'appro guident le traitement des demandes.'},
+      {to:'PO2',type:'Management → Opérationnel',arrow:'→',desc:'Les orientations du plan d\'appro guident la gestion des stocks.'},
+      {to:'PM2',type:'Management → Management',arrow:'→',desc:'Les indicateurs et le plan d\'appro alimentent la communication interne et externe.'}
+    ]},
+  PM2: { id:'PM2', type:'pm', title:'Communiquer en interne et en externe',
+    desc:'Réceptionner les directives et demandes, analyser les informations reçues et questionner si nécessaire. Agir en conséquence (réunions, cours, NeMO) et transmettre les éléments à la section et aux parties prenantes.',
+    agents:['Chef de Section','Resp. Pilotage','Approvisionneur'], outils:['Outlook','Transmission orale','NeMO'],
+    links:[
+      {to:'PM1',type:'Management ↔ Management',arrow:'↔',desc:'Les orientations reçues en réunion alimentent le pilotage interne et inversement.'},
+      {to:'PM3',type:'Management ↔ Management',arrow:'↔',desc:'Les situations arbitrées remontent via PM2 et les directives d\'arbitrage redescendent.'},
+      {to:'PM4',type:'Management ↔ Management',arrow:'↔',desc:'L\'état contractuel alimente la communication externe et les directives marché orientent la contractualisation.'}
+    ]},
+  PM3: { id:'PM3', type:'pm', title:'Arbitrer les situations non conformes ou non standards',
+    desc:'Analyser les blocages et anomalies remontés par les agents de la section ou les parties prenantes externes et apporter une réponse opérationnelle aux situations non couvertes par les procédures existantes.',
+    agents:['Chef de Section','Resp. Pilotage'], outils:['Outlook','SCALP','SIM@T','NeMO'],
+    links:[
+      {to:'PO1',type:'Management → Opérationnel',arrow:'→',desc:'La décision d\'arbitrage débloque le traitement de la demande.'},
+      {to:'PO3',type:'Management → Opérationnel',arrow:'→',desc:'La décision d\'arbitrage débloque la commande.'},
+      {to:'PM2',type:'Management → Management',arrow:'→',desc:'Les situations arbitrées sont remontées via la communication interne/externe.'}
+    ]},
+  PM4: { id:'PM4', type:'pm', title:'Gérer la contractualisation des achats sur marchés publics',
+    desc:'Rédiger, renouveler et mettre à jour les marchés publics en cours. Émettre un avis sur les pénalités de retard fournisseurs et assurer le suivi contractuel en lien avec le bureau Achat.',
+    agents:['Chef de Section'], outils:['Outlook','Alpha'],
+    links:[
+      {to:'PO3',type:'Management → Opérationnel',arrow:'→',desc:'Les marchés contractualisés définissent le cadre des commandes sous contrat.'},
+      {to:'PM2',type:'Management → Management',arrow:'→',desc:'L\'état contractuel alimente la communication externe avec les fournisseurs.'}
+    ]},
+  PO1: { id:'PO1', type:'po', title:'Traiter les demandes d\'approvisionnements',
+    desc:'Réceptionner et traiter les différentes demandes des parties prenantes.',
+    agents:['Appro. Polyvalent','Appro. Filtres','Appro. Marine','Appro. Flexibles','Gest. RR'], outils:['SIM@T','Excel','Outlook'],
+    links:[
+      {to:'PO2',type:'Opérationnel → Opérationnel',arrow:'↔',desc:'Un stock insuffisant génère une demande non solvable vers PO2 et PO2 alerte PO1 en retour.'},
+      {to:'PO3',type:'Opérationnel → Opérationnel',arrow:'→',desc:'Le traitement d\'une demande peut déclencher le passage d\'une commande.'},
+      {to:'PM1',type:'Opérationnel → Management',arrow:'→',desc:'Les données de demandes alimentent les indicateurs du tableau de bord.'},
+      {to:'PM3',type:'Opérationnel → Management',arrow:'→',desc:'Une demande non standard déclenche un arbitrage.'},
+      {to:'PS1',type:'Support → Opérationnel',arrow:'←',desc:'Les modes opératoires conditionnent la bonne exécution du traitement.'},
+      {to:'PM2',type:'Opérationnel → Management',arrow:'→',desc:'Les données de traitement des demandes alimentent la communication interne et externe.'}
+    ]},
+  PO2: { id:'PO2', type:'po', title:'Gérer les stocks et les niveaux de réapprovisionnements',
+    desc:'Surveiller et maintenir les niveaux de stock afin d\'éviter les ruptures et anticiper les besoins en approvisionnement.',
+    agents:['Resp. Pilotage ⚑','Appro. Polyvalent','Appro. Filtres','Appro. Marine','Appro. Flexibles','Gest. RR'], outils:['SIM@T','Excel','Outlook'],
+    links:[
+      {to:'PO1',type:'Opérationnel → Opérationnel',arrow:'↔',desc:'Un stock insuffisant génère des demandes vers PO1 et PO1 alimente PO2 en données de demandes.'},
+      {to:'PO3',type:'Opérationnel → Opérationnel',arrow:'→',desc:'Un stock en approche du seuil déclenche une commande anticipée.'},
+      {to:'PM1',type:'Opérationnel → Management',arrow:'→',desc:'Les données de stock alimentent les indicateurs de pilotage.'}
+    ]},
+  PO3: { id:'PO3', type:'po', title:'Acheter / Approvisionner les ressources et les matériels',
+    desc:'Assurer le passage des commandes fournisseurs dans le respect des contrats et des devis établis.',
+    agents:['Appro. Polyvalent','Appro. Filtres','Appro. Marine','Appro. Flexibles','Gest. RR'], outils:['SCALP','Outlook','SIM@T'],
+    links:[
+      {to:'PO1',type:'Opérationnel → Opérationnel',arrow:'←',desc:'Le traitement d\'une demande peut déclencher le passage d\'une commande.'},
+      {to:'PO2',type:'Opérationnel → Opérationnel',arrow:'←',desc:'Un stock en approche du seuil déclenche une commande anticipée.'},
+      {to:'PO4',type:'Opérationnel → Opérationnel',arrow:'→',desc:'Les commandes livrées peuvent générer des retours matériels.'},
+      {to:'PM1',type:'Opérationnel → Management',arrow:'→',desc:'Les données de commandes alimentent les indicateurs du tableau de bord.'},
+      {to:'PM3',type:'Opérationnel → Management',arrow:'→',desc:'Une commande bloquée ou non justifiée remonte pour arbitrage.'},
+      {to:'PM4',type:'Opérationnel → Management',arrow:'→',desc:'Un article traité sous devis peut être intégré au marché par la suite.'},
+      {to:'PS2',type:'Support → Opérationnel',arrow:'←',desc:'Des données SI fiabilisées conditionnent le bon passage des commandes.'},
+      {to:'PM2',type:'Opérationnel → Management',arrow:'→',desc:'Les données de commandes alimentent la communication externe avec les fournisseurs.'}
+    ]},
+  PO4: { id:'PO4', type:'po', title:'Traiter et gérer les retours de matériels et des parties prenantes',
+    desc:'Gérer les retours d\'articles selon leur état et recueillir les retours des parties prenantes concernant les articles livrés ou les services rendus.',
+    agents:['Resp. Pilotage','Réf. Tech. SCALP','Appro. Polyvalent','Appro. Filtres','Appro. Marine','Appro. Flexibles','Gest. RR'], outils:['SIM@T','SCALP','Excel','Transmission orale','Outlook'],
+    links:[
+      {to:'PO1',type:'Opérationnel → Opérationnel',arrow:'→',desc:'Les retours des parties prenantes peuvent générer de nouvelles demandes.'},
+      {to:'PO2',type:'Opérationnel → Opérationnel',arrow:'→',desc:'La réintégration d\'un article met à jour les niveaux de stock.'},
+      {to:'PO3',type:'Opérationnel → Opérationnel',arrow:'←',desc:'Les retours matériel découlent des commandes passées.'},
+      {to:'PM3',type:'Opérationnel → Management',arrow:'→',desc:'Un retour complexe ou litigieux remonte pour arbitrage.'}
+    ]},
+  PS1: { id:'PS1', type:'ps', title:'Créer et mettre à jour les procédures et modes opératoires',
+    desc:'Rédiger, mettre à jour et diffuser les procédures et modes opératoires de la section afin d\'assurer la continuité et la standardisation des pratiques.',
+    agents:['Chef de Section','Resp. Pilotage','Réf. Tech. SCALP'], outils:['Pack Office','SharePoint'],
+    links:[
+      {to:'PO1',type:'Support → Opérationnel',arrow:'→',desc:'Les modes opératoires conditionnent la bonne exécution du traitement des demandes.'},
+      {to:'PO3',type:'Support → Opérationnel',arrow:'→',desc:'Les modes opératoires encadrent le passage des commandes.'},
+      {to:'PS2',type:'Support → Support',arrow:'→',desc:'Les procédures SI encadrent la fiabilisation des données.'}
+    ]},
+  PS2: { id:'PS2', type:'ps', title:'Fiabiliser les données des SI métier',
+    desc:'Garantir la disponibilité, la fiabilité et le bon usage des systèmes d\'information métier de la section. Traiter les données erronées et accompagner les utilisateurs.',
+    agents:['Chef de Section','Adj. Chef Section','Resp. Pilotage','Réf. Tech. SCALP'], outils:['SCALP','SIM@T','Excel','Outlook','PowerPoint'],
+    links:[
+      {to:'PO3',type:'Support → Opérationnel',arrow:'→',desc:'Des données SI fiabilisées conditionnent le bon passage des commandes.'},
+      {to:'PS1',type:'Support ↔ Support',arrow:'↔',desc:'Les procédures et les données SI se fiabilisent mutuellement.'},
+      {to:'PS4',type:'Support → Support',arrow:'→',desc:'Des données SI fiabilisées garantissent l\'exactitude du référentiel article.'}
+    ]},
+  PS3: { id:'PS3', type:'ps', title:'Gérer les ressources humaines',
+    desc:'Assurer le suivi administratif du personnel de la section et gérer les disponibilités des agents.',
+    agents:['Chef de Section','Adj. Chef Section'], outils:['RH SI','Excel','Outlook'],
+    links:[
+      {to:'PM1',type:'Support → Management',arrow:'→',desc:'Les données RH alimentent le pilotage interne (disponibilités, absences).'},
+      {to:'PS2',type:'Support ↔ Support',arrow:'↔',desc:'La gestion RH coordonne les disponibilités pour les formations et interventions SI.'},
+      {to:'PM2',type:'Support → Management',arrow:'→',desc:'Les données RH et disponibilités alimentent la communication interne de la section.'}
+    ]},
+  PS4: { id:'PS4', type:'ps', title:'Gérer le référentiel article et la documentation',
+    desc:'Créer, mettre à jour et archiver les documents administratifs de la section (DIM, FIA, fiches articles) afin de garantir la traçabilité et la fiabilité du référentiel.',
+    agents:['Resp. Pilotage','Réf. Tech. SCALP','Appro. Polyvalent','Appro. Filtres','Appro. Marine','Appro. Flexibles','Gest. RR'], outils:['SCALP','SharePoint','SIM@T','Excel'],
+    links:[
+      {to:'PO3',type:'Support → Opérationnel',arrow:'→',desc:'Un référentiel article à jour conditionne le passage des commandes.'},
+      {to:'PS2',type:'Support → Support',arrow:'→',desc:'Des données référentiel fiables alimentent la fiabilisation des SI.'},
+      {to:'PM1',type:'Support → Management',arrow:'→',desc:'Un référentiel fiable alimente les indicateurs du tableau de bord.'},
+      {to:'PM4',type:'Support → Management',arrow:'→',desc:'Le référentiel article alimente la contractualisation des marchés.'}
+    ]}
+};
+
+let activeCard = null;
+function getTagClass(id) { return id.startsWith('PM')?'pm':id.startsWith('PO')?'po':'ps'; }
+
+function selectCard(id) {
+  if (activeCard===id) { resetAll(); activeCard=null; return; }
+  activeCard=id;
+  const data=DATA[id], linkedIds=data.links.map(l=>l.to);
+  Object.keys(DATA).forEach(cid=>{
+    const el=document.getElementById(cid);
+    el.classList.remove('active','linked','dimmed');
+    if(cid===id) el.classList.add('active');
+    else if(linkedIds.includes(cid)) el.classList.add('linked');
+    else el.classList.add('dimmed');
+  });
+  document.getElementById('panelEmpty').style.display='none';
+  document.getElementById('panelContent').classList.add('visible');
+  document.getElementById('panelId').textContent=data.id;
+  document.getElementById('panelTitle').textContent=data.title;
+  document.getElementById('panelDesc').textContent=data.desc;
+  const linksEl=document.getElementById('panelLinks');
+  linksEl.innerHTML=data.links.length===0
+    ?'<p style="font-size:0.6rem;color:#444;font-style:italic">Aucun lien direct identifié.</p>'
+    :data.links.map(l=>`<div class="link-item"><div class="link-type">${l.type}</div><div class="link-flow"><span class="flow-tag ${getTagClass(id)}">${id}</span><span class="flow-arrow">${l.arrow}</span><span class="flow-tag ${getTagClass(l.to)}">${l.to}</span></div><div class="link-desc">${l.desc}</div></div>`).join('');
+}
+
+function resetAll() {
+  Object.keys(DATA).forEach(id=>document.getElementById(id).classList.remove('active','linked','dimmed'));
+  document.getElementById('panelEmpty').style.display='flex';
+  document.getElementById('panelContent').classList.remove('visible');
+}
+
+const tip=document.getElementById('descTip');
+function showDesc(id) {
+  if(activeCard) return;
+  const d=DATA[id];
+  let html = `<strong>${d.id} — ${d.title}</strong>${d.desc}`;
+  if(d.agents && d.agents.length>0) {
+    html += `<div style="margin-top:6px;padding-top:5px;border-top:1px solid rgba(255,255,255,0.2)"><span style="font-size:0.56rem;text-transform:uppercase;letter-spacing:0.08em;opacity:0.7">Acteurs</span><div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:3px">${d.agents.map(a=>`<span style="background:rgba(255,255,255,0.15);padding:1px 5px;border-radius:1px;font-size:0.54rem">${a}</span>`).join('')}</div></div>`;
+  }
+  if(d.outils && d.outils.length>0) {
+    html += `<div style="margin-top:5px"><span style="font-size:0.56rem;text-transform:uppercase;letter-spacing:0.08em;opacity:0.7">Outils</span><div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:3px">${d.outils.map(o=>`<span style="background:rgba(255,255,255,0.15);padding:1px 5px;border-radius:1px;font-size:0.54rem">${o}</span>`).join('')}</div></div>`;
+  }
+  tip.innerHTML=html;
+  tip.style.display='block';
+}
+function hideDesc() { tip.style.display='none'; }
+document.addEventListener('mousemove',e=>{
+  if(tip.style.display==='none') return;
+  let x=e.clientX+14,y=e.clientY+14;
+  if(x+245>window.innerWidth) x=e.clientX-253;
+  if(y+115>window.innerHeight) y=e.clientY-115;
+  tip.style.left=x+'px'; tip.style.top=y+'px';
+});
+
+// ── FLÈCHES DE FLUX OPÉRATIONNEL ──
+function drawFlux() {
+  const svg = document.getElementById('fluxSVG');
+  if (!svg) return;
+
+  while (svg.children.length > 1) svg.removeChild(svg.lastChild);
+
+  const band = svg.parentElement;
+  const bandRect = band.getBoundingClientRect();
+
+  function rel(el) {
+    const r = el.getBoundingClientRect();
+    return {
+      x:      r.left - bandRect.left + r.width / 2,
+      y:      r.top  - bandRect.top  + r.height / 2,
+      top:    r.top    - bandRect.top,
+      bottom: r.bottom - bandRect.top,
+      left:   r.left   - bandRect.left,
+      right:  r.right  - bandRect.left,
+      w: r.width, h: r.height
+    };
+  }
+
+  function ortho(points, markerId, color) {
+    const d = points.map((p,i) => (i===0?'M':'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d', d);
+    path.setAttribute('stroke', color);
+    path.setAttribute('stroke-width','2');
+    path.setAttribute('fill','none');
+    path.setAttribute('marker-end',`url(#${markerId})`);
+    path.setAttribute('opacity','0.9');
+    svg.appendChild(path);
+  }
+
+  const p1=rel(document.getElementById('PO1'));
+  const p2=rel(document.getElementById('PO2'));
+  const p3=rel(document.getElementById('PO3'));
+  const p4=rel(document.getElementById('PO4'));
+  if (!p1 || !p2 || !p3 || !p4) return;
+
+  const VERT = '#2D4A2D';
+
+  // Flèche depuis Besoins des parties prenantes → PO1 (entre par la gauche)
+  ortho([[p1.left - 75, p1.y],[p1.left, p1.y]], 'arr-vert', VERT);
+
+  // PO1 → PO2 : ligne droite horizontale
+  ortho([[p1.right, p1.y],[p2.left, p2.y]], 'arr-vert', VERT);
+
+  // PO2 → PO3 : ligne droite horizontale
+  ortho([[p2.right, p2.y],[p3.left, p3.y]], 'arr-vert', VERT);
+
+  // PO3 → sortie : ligne horizontale
+  const sortieX = p3.right + 75;
+  ortho([[p3.right, p3.y],[sortieX, p3.y]], 'arr-vert', VERT);
+
+  // PO3 → PO4 : sort du bas de PO3, descend puis rejoint le bord droit de PO4
+  const pathPO34 = document.createElementNS('http://www.w3.org/2000/svg','path');
+  const dPO34 = `M${p3.x},${p3.bottom} L${p3.x},${p4.y} L${p4.right},${p4.y}`;
+  pathPO34.setAttribute('d', dPO34);
+  pathPO34.setAttribute('stroke', VERT);
+  pathPO34.setAttribute('stroke-width', '2');
+  pathPO34.setAttribute('stroke-dasharray', '6,4');
+  pathPO34.setAttribute('fill', 'none');
+  pathPO34.setAttribute('marker-end', 'url(#arr-vert)');
+  pathPO34.setAttribute('opacity', '0.9');
+  svg.appendChild(pathPO34);
+
+  // Flèche depuis Satisfaction des parties prenantes → PO4 (entre par la DROITE, pointillé)
+  const pathSat = document.createElementNS('http://www.w3.org/2000/svg','path');
+  pathSat.setAttribute('d', `M${p4.right + 75},${p4.y} L${p4.right},${p4.y}`);
+  pathSat.setAttribute('stroke', VERT);
+  pathSat.setAttribute('stroke-width', '2');
+  pathSat.setAttribute('stroke-dasharray', '6,4');
+  pathSat.setAttribute('fill', 'none');
+  pathSat.setAttribute('marker-end', 'url(#arr-vert)');
+  pathSat.setAttribute('opacity', '0.9');
+  svg.appendChild(pathSat);
+}
+
+window.addEventListener('load', () => setTimeout(drawFlux, 600));
+window.addEventListener('resize', () => setTimeout(drawFlux, 150));
+
+function openModal(id) { document.getElementById(id).style.display='flex'; document.body.style.overflow='hidden'; }
+function closeModal(id) { document.getElementById(id).style.display='none'; document.body.style.overflow=''; }
+function openPriorisation() { openModal('prioriModal'); }
+function openParties() { openModal('partiesModal'); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){closeModal('sipocModal');closeModal('prioriModal');closeModal('partiesModal');} });
+
+// ── NOUVEAU FORMAT SIPOC HORIZONTAL ──
+const SIPOC_CONTENT = {
+  PO1: {
+    id:'PO1', title:'Traiter les demandes d\'approvisionnements', badge:'Opérationnel',
+    suppliers: ['BO','Dépôts / Parties prenantes','PO4','PM1'],
+    inputs:    ['Tableau DHNS','Mails de demande','NeMO','Nouvelle demande suite à retour (PO4)','Orientations du plan d\'appro (PM1)'],
+    steps:     ['Réceptionner les demandes','Analyser et prioriser selon criticité','Traiter les demandes solvables','Rendre compte des situations non solvables'],
+    outputs:   ['Commande déclenchée','Demandes traitées','Rendre compte → PM3','Mise à jour stock','Données de demandes → PM1'],
+    customers: ['PO3','Dépôts / Parties prenantes','PO2','PM3','PM1'],
+    legende:   'PO2 — Gérer les stocks et les niveaux de réapprovisionnements · PO3 — Acheter / Approvisionner les ressources et les matériels · PO4 — Traiter et gérer les retours de matériels et des parties prenantes · PM1 — Piloter la performance du processus · PM3 — Arbitrer les situations non conformes ou non standards · DHNS — Demande d\'Hypothèque Non Satisfaite · BO — Business Object (SI)'
+  },
+  PO2: {
+    id:'PO2', title:'Gérer les stocks et les niveaux de réapprovisionnements', badge:'Opérationnel',
+    suppliers: ['PO1','Resp. Pilotage','CSL','PM1'],
+    inputs:    ['Demande non solvable — stock insuffisant','Fichier Excel extrait SIM@T','Mail de signalement manque stock','Stock physique erroné','Orientations du plan d\'appro (PM1)'],
+    steps:     ['Réceptionner et analyser les données de stock','Prioriser les stocks à réapprovisionner','Identifier les articles en approche du seuil critique','Réaliser les réapprovisionnements','Alerter si réapprovisionnement non réalisé'],
+    outputs:   ['Commande anticipée','Alerte réapprovisionnement','Mise à jour des données','Données de stock → PM1'],
+    customers: ['PO3','Resp. Pilotage','PM1','Approvisionneur'],
+    legende:   'PO1 — Traiter les demandes d\'approvisionnements · PO3 — Acheter / Approvisionner les ressources et les matériels · PM1 — Piloter la performance du processus · SS — Stock de Sécurité · PDC — Point de Commande · CSL — Magasin central'
+  },
+  PO3: {
+    id:'PO3', title:'Acheter / Approvisionner les ressources et les matériels', badge:'Opérationnel',
+    suppliers: ['PO1','PO2','Approvisionneur','Fournisseurs externes','PM4','PS1','PS2','PS4'],
+    inputs:    ['Demande nécessitant commande','Commande anticipée','CT SharePoint','Devis fournisseur (hors marché)','Contrat / marché applicable (PM4)','Mode opératoire commande (PS1)','Données SI fiabilisées (PS2)','Référentiel article à jour (PS4)'],
+    steps:     ['Identifier le type de commande (marché / hors marché)','Rédiger et soumettre la commande dans SCALP','Suivre le circuit de validation (ZPDR ou ZHPR)','Vérifier la prise en charge de la commande par le CSL','Suivre la commande jusqu\'à réception par le demandeur'],
+    steps2:    ['Gérer les nivellements inter-dépôts'],
+    outputs:   ['Commande validée','Nivellement accordé','Données de commandes → PM1','Commande bloquée → PM3'],
+    customers: ['CSL','Dépôt demandeur','PM1','PM3'],
+    legende:   'PO1 — Traiter les demandes d\'approvisionnements · PO2 — Gérer les stocks et les niveaux de réapprovisionnements · PO4 — Traiter et gérer les retours de matériels et des parties prenantes · PM1 — Piloter la performance du processus · PM3 — Arbitrer les situations non conformes ou non standards · PM4 — Gérer la contractualisation des achats sur marchés publics · PS1 — Créer et mettre à jour les procédures et modes opératoires · PS2 — Fiabiliser les données des SI métier · PS4 — Gérer le référentiel article et la documentation · ZPDR — Commande sur marché · ZHPR — Commande hors marché · CSL — Magasin central · CT — Contrat Technique'
+  },
+  PO4: {
+    id:'PO4', title:'Traiter et gérer les retours de matériels et des parties prenantes', badge:'Opérationnel',
+    suppliers: ['Dépôts','Unités / Missions','PO3','Parties prenantes'],
+    inputs:    ['Article(s) à retourner dans un état défini','Information système associée','Retour / réclamation par mail','Données → PM1'],
+    steps:     ['Réceptionner le retour ou la réclamation','Réintégrer l\'article en stock si applicable','Analyser et répondre aux parties prenantes','Agir si une action est nécessaire'],
+    outputs:   ['Stock réintégré','Réponse transmise','Action déclenchée','Mise à jour des données','Retour complexe → PM3'],
+    customers: ['PO2','Parties prenantes','PO1','Resp. Pilotage','PM3'],
+    legende:   'PO1 — Traiter les demandes d\'approvisionnements · PO2 — Gérer les stocks et les niveaux de réapprovisionnements · PO3 — Acheter / Approvisionner les ressources et les matériels · PM1 — Piloter la performance du processus · PM3 — Arbitrer les situations non conformes ou non standards'
+  },
+  PM1: {
+    id:'PM1', title:'Piloter la performance du processus', badge:'Management',
+    suppliers: ['PO1','PO2','PO3','PO4','PS3','PS4','Parties prenantes'],
+    inputs:    ['Données de demandes (PO1)','Données de stock (PO2)','Données de commandes (PO3)','Données de retours (PO4)','Données RH (PS3)','Référentiel article (PS4)','Demande d\'extraction / critères spécifiques'],
+    steps:     ['Définir les indicateurs','Traiter et analyser les données','Construire / Mettre à jour les indicateurs et visualisations'],
+    outputs:   ['Plan d\'approvisionnement','Tableau de bord','Orientations → PO1','Orientations → PO2','Orientations → PM2'],
+    customers: ['Section Approvisionnement','PO1','PO2','PM2'],
+    legende:   'PO1 — Traiter les demandes d\'approvisionnements · PO2 — Gérer les stocks et les niveaux de réapprovisionnements · PO3 — Acheter / Approvisionner les ressources et les matériels · PO4 — Traiter et gérer les retours de matériels et des parties prenantes · PS3 — Gérer les ressources humaines · PS4 — Gérer le référentiel article et la documentation · PM2 — Communiquer en interne et en externe'
+  },
+  PM2: {
+    id:'PM2', title:'Communiquer en interne et en externe', badge:'Management',
+    suppliers: ['Hiérarchie (commandant, CEM, OPS)','Sections partenaires','Autres armées','PM1','PM3','PM4'],
+    inputs:    ['Directives et orientations','Demande de renseignement (oral ou écrite)','NeMO','Indicateurs et plan d\'appro (PM1)','Situations arbitrées (PM3)','État contractuel (PM4)'],
+    steps:     ['Réceptionner les directives et demandes','Analyser les informations reçues','Questionner si nécessaire pour clarifier','Agir en conséquence (réunion, conseil, message NeMO)','Transmettre les éléments à la section et aux parties prenantes'],
+    outputs:   ['Réunions','Cours','Comptes-rendus','Documents','Message NeMO sortant','Orientations → PM1','Arbitrages → PM3','Directives marché → PM4'],
+    customers: ['Section Approvisionnement','Sections partenaires','Hiérarchie / Chef de Section','Fournisseurs','Autres armées','PM1','PM3','PM4'],
+    legende:   'PM1 — Piloter la performance du processus · PM3 — Arbitrer les situations non conformes ou non standards · PM4 — Gérer la contractualisation des achats sur marchés publics · NeMO — Nouvelle Messagerie Officielle'
+  },
+  PM3: {
+    id:'PM3', title:'Arbitrer les situations non conformes ou non standards', badge:'Management',
+    suppliers: ['Agents de la section','Parties prenantes externes','PO1','PO3','PO4','PM2'],
+    inputs:    ['Remontée d\'un blocage / anomalie (mail ou oral)','Blocage demande (PO1)','Commande bloquée (PO3)','Retour complexe (PO4)','Directives arbitrage (PM2)'],
+    steps:     ['Réceptionner et analyser le blocage ou l\'anomalie','Arbitrer et définir la réponse à apporter','Communiquer la décision aux parties concernées'],
+    outputs:   ['Décision d\'arbitrage communiquée','Action corrective déclenchée','Compte-rendu','Plan d\'action','Situations arbitrées → PM2'],
+    customers: ['Agents de la section','PO1','PO3','Parties prenantes externes','PM2'],
+    legende:   'PO1 — Traiter les demandes d\'approvisionnements · PO3 — Acheter / Approvisionner les ressources et les matériels · PO4 — Traiter et gérer les retours de matériels et des parties prenantes · PM2 — Communiquer en interne et en externe'
+  },
+  PM4: {
+    id:'PM4', title:'Gérer la contractualisation des achats sur marchés publics', badge:'Management',
+    suppliers: ['Fournisseurs','Bureau Achat','Agent Appro.','PM1','PM2'],
+    inputs:    ['RETEX','Demande de modification de contrat','Nouveau contrat','Indicateurs de performance contrats (PM1)','Directives marché (PM2)'],
+    steps:     ['Identifier et exprimer le besoin','Analyser la faisabilité et le cadre réglementaire','Rédiger ou mettre à jour les spécifications du marché','Soumettre pour validation au Bureau Achat','Mettre à jour les SI métier','Suivre l\'exécution et émettre un avis'],
+    outputs:   ['Contrat nouveau / mis à jour / supprimé','Avis de pénalité','Mise à jour des SI métier','Contrat / marché applicable → PO3','État contractuel → PM2'],
+    customers: ['Bureau Achat','Fournisseurs','PO3','PM2'],
+    legende:   'PO3 — Acheter / Approvisionner les ressources et les matériels · PM1 — Piloter la performance du processus · PM2 — Communiquer en interne et en externe · Alpha — Outil de gestion contractuelle · RETEX — Retour d\'Expérience'
+  },
+  PS1: {
+    id:'PS1', title:'Créer et mettre à jour les procédures et modes opératoires', badge:'Support',
+    suppliers: ['Section Approvisionnement','Stagiaire'],
+    inputs:    ['Document manquant / erroné / obsolète'],
+    steps:     ['Identifier le besoin','Rédiger ou mettre à jour la procédure / mode opératoire','Mettre à disposition et diffuser'],
+    outputs:   ['Mode opératoire → PO1','Mode opératoire → PO3','Procédure SI → PS2','Procédure / mode opératoire disponible sur SharePoint'],
+    customers: ['PO1','PO3','PS2','Tout utilisateur concerné par la procédure'],
+    legende:   'PO1 — Traiter les demandes d\'approvisionnements · PO3 — Acheter / Approvisionner les ressources et les matériels · PS2 — Fiabiliser les données des SI métier'
+  },
+  PS2: {
+    id:'PS2', title:'Fiabiliser les données des SI métier', badge:'Support',
+    suppliers: ['Agents de la section','Parties prenantes','PS1'],
+    inputs:    ['Données erronées','Signalement (mail ou oral)','Procédure SI (PS1)'],
+    steps:     ['Réceptionner et analyser le signalement','Résoudre le blocage technique','Accompagner l\'utilisateur et fiabiliser les données'],
+    outputs:   ['Incident résolu','Données SI fiabilisées → PO3','Données SI fiabilisées → PS4','Utilisateur accompagné'],
+    customers: ['Agents de la section','Parties prenantes','PO3','PS4'],
+    legende:   'PO3 — Acheter / Approvisionner les ressources et les matériels · PS1 — Créer et mettre à jour les procédures et modes opératoires · PS4 — Gérer le référentiel article et la documentation · SI — Système d\'Information'
+  },
+  PS3: {
+    id:'PS3', title:'Gérer les ressources humaines', badge:'Support',
+    suppliers: ['Agents de la section','Hiérarchie'],
+    inputs:    ['Demande de congés / absence','Directive administrative','Demande de formation','Arrêté / ordre de mutation','Note de service'],
+    steps:     ['Réceptionner et traiter les demandes','Gérer les absences et remplacements','Mettre à jour les tableaux de présence','Communiquer les informations RH à la hiérarchie'],
+    steps2:    ['Réceptionner la demande de formation ou mutation','Planifier et organiser la formation / mutation','Assurer le suivi administratif','Communiquer les informations RH à la hiérarchie'],
+    outputs:   ['Demandes traitées et validées','Suivi administratif à jour','Formation','Tableau de présence mis à jour','Note de mutation / départ','Données RH → PM1','Contraintes disponibilité → PS2'],
+    customers: ['Agents de la section','Hiérarchie','PM1','PS2'],
+    legende:   'PM1 — Piloter la performance du processus · PS2 — Fiabiliser les données des SI métier'
+  },
+  PS4: {
+    id:'PS4', title:'Gérer le référentiel article et la documentation', badge:'Support',
+    suppliers: ['Approvisionneurs','Réf. Tech. SCALP / Major','Resp. Pilotage','PS2','Parties prenantes'],
+    inputs:    ['Besoin de création ou mise à jour d\'un article (DIM)','Besoin d\'association article / fournisseur (FIA)','Identification d\'articles obsolètes à supprimer','Document manquant / erroné / obsolète'],
+    steps:     ['Créer ou mettre à jour la DIM','Créer ou mettre à jour la FIA','Valider et archiver / supprimer les articles obsolètes','Archiver et classer les documents'],
+    outputs:   ['DIM créée / mise à jour / supprimée','FIA créée / mise à jour','Référentiel article à jour','Documentation archivée et classée'],
+    customers: ['PO3','PS2','PM1','PM4','Parties prenantes'],
+    legende:   'PO3 — Acheter / Approvisionner les ressources et les matériels · PS2 — Fiabiliser les données des SI métier · PM1 — Piloter la performance du processus · PM4 — Gérer la contractualisation des achats sur marchés publics · DIM — Demande d\'Identification Matériel · FIA — Fiche d\'Identification Article'
+  }
+};
+
+function openSIPOC(id) {
+  const d = SIPOC_CONTENT[id];
+  if (!d) return;
+
+  // Couleurs militaires par colonne
+  const COL = {
+    S: { bg:'#2D4A2D', light:'#EAF0EA', txt:'#FFFFFF' },
+    I: { bg:'#1A2A4A', light:'#E8ECF3', txt:'#FFFFFF' },
+    P: { bg:'#7A5C10', light:'#F5EFE0', txt:'#FFFFFF' },
+    O: { bg:'#5A6E22', light:'#EFF2E5', txt:'#FFFFFF' },
+    C: { bg:'#6B3A1A', light:'#F3EBE5', txt:'#FFFFFF' }
+  };
+
+  // Construit une colonne (S, I, O ou C)
+  function column(letter, labelEn, labelFr, items, key) {
+    const c = COL[key];
+    // Extraire les termes de la légende (avant le " — ")
+    const legendeTerms = d.legende ? d.legende.split(' · ').map(l => l.split(' — ')[0].trim().toLowerCase()) : [];
+    function hasLegend(item) {
+      return legendeTerms.some(term => item.toLowerCase().includes(term));
+    }
+    const bubbles = items.filter(x => x).map(item => `
+      <div class="sipoc-bubble" style="background:${c.light};border:2px solid ${c.bg};">
+        ${item}${hasLegend(item) ? '<span style="color:#111;font-size:18px;font-weight:900;margin-left:2px;line-height:1;">*</span>' : ''}
+      </div>`).join('');
+    return `
+      <div class="sipoc-col">
+        <div class="sipoc-head" style="background:${c.bg};color:${c.txt};">
+          <span class="sh-en">${labelEn}</span>
+          <span class="sh-fr">${labelFr}</span>
+        </div>
+        <div class="sipoc-col-body">
+          ${bubbles}
+        </div>
+      </div>`;
+  }
+
+  // Colonne Process : enchaînement vertical Start → étapes → End
+  function processColumn() {
+    const c = COL.P;
+    function buildBranch(stepsArr) {
+      const legendeTerms = d.legende ? d.legende.split(' · ').map(l => l.split(' — ')[0].trim().toLowerCase()) : [];
+      function hasLegend(item) { return legendeTerms.some(term => item.toLowerCase().includes(term)); }
+      return stepsArr.map((s, i) => `
+        <div class="sipoc-bubble" style="background:${c.light};border:2px solid ${c.bg};">
+          <span style="display:inline-block;background:${c.bg};color:#fff;border-radius:50%;width:16px;height:16px;line-height:16px;font-size:0.6rem;margin-right:5px;">${i+1}</span>${s}${hasLegend(s) ? '<span style="color:#111;font-size:18px;font-weight:900;margin-left:2px;line-height:1;">*</span>' : ''}
+        </div>
+        ${i < stepsArr.length-1 ? `<div class="sipoc-varrow" style="color:${c.bg};">▼</div>` : ''}`).join('');
+    }
+
+    let body;
+    if (d.steps2) {
+      // Deux branches parallèles
+      body = `<div style="display:flex;gap:12px;align-items:flex-start;">
+        <div style="flex:1;display:flex;flex-direction:column;gap:0;">
+          <div style="font-size:0.55rem;font-weight:700;color:${c.bg};text-align:center;margin-bottom:6px;text-transform:uppercase;">Branche 1</div>
+          ${buildBranch(d.steps)}
+        </div>
+        <div style="width:2px;background:${c.bg};opacity:0.3;align-self:stretch;margin-top:20px;"></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:0;">
+          <div style="font-size:0.55rem;font-weight:700;color:${c.bg};text-align:center;margin-bottom:6px;text-transform:uppercase;">Branche 2</div>
+          ${buildBranch(d.steps2)}
+        </div>
+      </div>`;
+    } else {
+      body = buildBranch(d.steps);
+    }
+
+    return `
+      <div class="sipoc-col" style="${d.steps2 ? 'min-width:300px;max-width:400px;' : ''}">
+        <div class="sipoc-head" style="background:${c.bg};color:${c.txt};">
+          <span class="sh-en">Process</span>
+          <span class="sh-fr">Processus</span>
+        </div>
+        <div class="sipoc-col-body">
+          <div class="sipoc-endcap" style="background:#555;color:#fff;">DÉBUT</div>
+          <div class="sipoc-varrow" style="color:${c.bg};">▼</div>
+          ${body}
+          <div class="sipoc-varrow" style="color:${c.bg};">▼</div>
+          <div class="sipoc-endcap" style="background:#555;color:#fff;">FIN</div>
+        </div>
+      </div>`;
+  }
+
+  const html = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-bottom:2px solid #2D4A2D;padding-bottom:12px">
+      <h2 style="font-family:Georgia,serif;font-size:1.05rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#2D4A2D">SIPOC — ${d.title}</h2>
+      <span style="background:#7A5C10;color:#F5F0E8;font-family:Georgia,serif;font-size:0.64rem;font-weight:700;padding:5px 12px;border-radius:2px;letter-spacing:0.08em;text-transform:uppercase;white-space:nowrap;">${d.badge}</span>
+    </div>
+    <div class="sipoc-grid">
+      ${column('S','Suppliers','Fournisseurs', d.suppliers, 'S')}
+      ${column('I','Inputs','Entrées', d.inputs, 'I')}
+      ${processColumn()}
+      ${column('O','Outputs','Sorties', d.outputs, 'O')}
+      ${column('C','Customers','Clients', d.customers, 'C')}
+    </div>
+    ${d.legende ? `<div style="margin-top:14px;font-size:0.56rem;color:#666;border-top:1px solid #E8E0CC;padding-top:8px;">${d.legende}</div>` : ''}`;
+
+  document.getElementById('modalBody').innerHTML = html;
+  openModal('sipocModal');
+  setTimeout(() => { normalizeSIPOCBubbles(); drawSIPOCLinks(d); }, 80);
+}
+
+// ── DONNÉES DE LIENS S↔I et O↔C ──
+const SIPOC_LINKS = {
+  // PO1 : S=[BO(0), Dépôts/PP(1), PO4(2), PM1(3)] I=[DHNS(0), Mails(1), NEMO(2), Retour PO4(3), Orientations PM1(4)]
+  //        O=[Commande(0), Demandes traitées(1), Rendre compte PM3(2), MAJ stock(3), Données PM1(4)] C=[PO3(0), Dépôts/PP(1), PO2(2), PM3(3), PM1(4)]
+  PO1: {
+    si: [[0,[0]], [1,[1,2]], [2,[3]], [3,[4]]],
+    oc: [[0,[0]], [1,[1]], [2,[2]], [3,[3]], [4,[4]]]
+  },
+  // PO2 : S=[PO1(0), Resp.Pilotage(1), CSL(2), PM1(3)] I=[non solvable(0), Excel SIM@T(1), mail signalement(2), stock erroné(3), orientations PM1(4)]
+  //        O=[commande anticipée(0), alerte(1), MAJ données(2), données PM1(3)] C=[PO3(0), Resp.Pilotage(1), PM1(2), Appro(3)]
+  PO2: {
+    si: [[0,[0]], [1,[1]], [2,[2,3]], [3,[4]]],
+    oc: [[0,[0]], [1,[1]], [2,[2]], [3,[2]]]
+  },
+  // PO3 : S=[PO1(0), PO2(1), Appro(2), Fourn(3), PM4(4), PS1(5), PS2(6), PS4(7)]
+  //        I=[demande(0), commande anticipée(1), CT(2), devis(3), contrat PM4(4), MO PS1(5), SI PS2(6), réf PS4(7)]
+  //        O=[commande validée(0), nivellement(1), données PM1(2), bloquée PM3(3)] C=[CSL(0), dépôt(1), PM1(2), PM3(3)]
+  PO3: {
+    si: [[0,[0]], [1,[1]], [2,[2]], [3,[3]], [4,[4]], [5,[5]], [6,[6]], [7,[7]]],
+    oc: [[0,[0]], [1,[1]], [2,[2]], [3,[3]]]
+  },
+  // PO4 : S=[Dépôts(0), Unités(1), PO3(2), PP(3)] I=[article(0), info SI(1), réclamation(2), données PM1(3)]
+  //        O=[stock(0), réponse(1), action(2), MAJ données(3), PM3(4)] C=[PO2(0), PP(1), PO1(2), Resp.Pilotage(3), PM3(4)]
+  PO4: {
+    si: [[0,[0]], [1,[0]], [2,[1,3]], [3,[2]]],
+    oc: [[0,[0]], [1,[1]], [2,[2]], [3,[3]], [4,[4]]]
+  },
+  // PM1 : S=[PO1(0), PO2(1), PO3(2), PO4(3), PS3(4), PS4(5), PP(6)]
+  //        I=[données demandes(0), données stock(1), données commandes(2), données retours(3), données RH(4), réf article(5), demande extraction(6)]
+  //        O=[plan appro(0), tableau bord(1), orientations PO1(2), orientations PO2(3), orientations PM2(4)] C=[Section(0), PO1(1), PO2(2), PM2(3)]
+  PM1: {
+    si: [[0,[0]], [1,[1]], [2,[2]], [3,[3]], [4,[4]], [5,[5]], [6,[6]]],
+    oc: [[0,[0]], [1,[0]], [2,[1]], [3,[2]], [4,[3]]]
+  },
+  // PM2 : S=[Hiérarchie(0), Sections partenaires(1), Autres armées(2), PM1(3), PM3(4), PM4(5)]
+  //        I=[directives(0), demande rens(1), NEMO(2), indicateurs PM1(3), situations PM3(4), état PM4(5)]
+  //        O=[réunions(0), cours(1), CR(2), docs(3), NEMO(4), orient PM1(5), arbitrages PM3(6), directives PM4(7)]
+  //        C=[Section(0), Sections partenaires(1), Hiérarchie(2), Fourn(3), Autres armées(4), PM1(5), PM3(6), PM4(7)]
+  PM2: {
+    si: [[0,[0]], [1,[1]], [2,[2]], [3,[3]], [4,[4]], [5,[5]]],
+    oc: [[0,[0,1,2,3,4]], [1,[0,1,2,3,4]], [2,[0,1,2,3,4]], [3,[0,1,2,3,4]], [4,[4]], [5,[5]], [6,[6]], [7,[7]]]
+  },
+  // PM3 : S=[Agents(0), PP ext(1), PO1(2), PO3(3), PO4(4), PM2(5)]
+  //        I=[blocage/anomalie(0), blocage demande PO1(1), commande bloquée PO3(2), retour complexe PO4(3), directives PM2(4)]
+  //        O=[décision(0), action corrective(1), CR(2), plan action(3), situations PM2(4)] C=[Agents(0), PO1(1), PO3(2), PP ext(3), PM2(4)]
+  PM3: {
+    si: [[0,[0]], [1,[0]], [2,[1]], [3,[2]], [4,[3]], [5,[4]]],
+    oc: [[0,[0]], [1,[1,2]], [2,[1,2]], [3,[3]], [4,[4]]]
+  },
+  // PM4 : S=[Fourn(0), Bureau Achat(1), Agent Appro(2), PM1(3), PM2(4)]
+  //        I=[RETEX(0), modif contrat(1), nouveau contrat(2), indicateurs PM1(3), directives PM2(4)]
+  //        O=[contrat(0), avis pénalité(1), MAJ SI(2), contrat→PO3(3), état→PM2(4)] C=[Bureau Achat(0), Fourn(1), PO3(2), PM2(3)]
+  PM4: {
+    si: [[0,[0,1]], [1,[0,2]], [2,[0,3]], [3,[3]], [4,[4]]],
+    oc: [[0,[0]], [1,[1]], [2,[2]], [3,[2]], [4,[3]]]
+  },
+  // PS1 : S=[Section(0), Stagiaire(1)] I=[document manquant(0)]
+  //        O=[MO→PO1(0), MO→PO3(1), procédure SI→PS2(2), procédure SharePoint(3)] C=[PO1(0), PO3(1), PS2(2), Tout utilisateur(3)]
+  PS1: {
+    si: [[0,[0]], [1,[0]]],
+    oc: [[0,[0]], [1,[1]], [2,[2]], [3,[3]]]
+  },
+  // PS2 : S=[Agents(0), PP(1), PS1(2)] I=[données erronées(0), signalement(1), procédure PS1(2)]
+  //        O=[incident résolu(0), SI fiabilisées→PO3(1), SI fiabilisées→PS4(2), utilisateur accompagné(3)] C=[Agents(0), PP(1), PO3(2), PS4(3)]
+  PS2: {
+    si: [[0,[0,1]], [1,[0,1]], [2,[2]]],
+    oc: [[0,[0,1]], [1,[2]], [2,[3]], [3,[0,1]]]
+  },
+  // PS3 : S=[Agents(0), Hiérarchie(1)] I=[congés(0), directive(1), formation(2), mutation(3), note(4)]
+  //        O=[demandes traitées(0), suivi admin(1), formation(2), tableau présence(3), mutation(4), données RH→PM1(5), contraintes→PS2(6)]
+  //        C=[Agents(0), Hiérarchie(1), PM1(2), PS2(3)]
+  PS3: {
+    si: [[0,[0,2]], [1,[1,3,4]]],
+    oc: [[0,[0]], [1,[1]], [2,[0]], [3,[1]], [4,[1]], [5,[2]], [6,[3]]]
+  },
+  // PS4 : S=[Appro(0), Major(1), Resp.Pilotage(2), PS2(3), PP(4)]
+  //        I=[DIM(0), FIA(1), obsolètes(2), doc manquant(3)]
+  //        O=[DIM(0), FIA(1), réf article(2), doc archivée(3)] C=[PO3(0), PS2(1), PM1(2), PM4(3), PP(4)]
+  PS4: {
+    si: [[0,[0,1]], [1,[2]], [2,[0]], [3,[3]], [4,[3]]],
+    oc: [[0,[0]], [1,[1]], [2,[2,0]], [3,[3,4]]]
+  }
+};
+
+function ppHover(el) {
+  const role = el.getAttribute('data-role');
+  const box = document.getElementById('ppRoleBox');
+  if (!box || !role) return;
+  box.textContent = role;
+  box.style.color = '#333';
+  box.style.fontStyle = 'normal';
+  el.querySelector('rect').style.opacity = '0.75';
+}
+function ppLeave() {
+  const box = document.getElementById('ppRoleBox');
+  if (box) {
+    box.textContent = 'Survolez un acteur pour afficher son rôle dans les processus.';
+    box.style.color = '#888';
+    box.style.fontStyle = 'italic';
+  }
+  document.querySelectorAll('.pp-node rect').forEach(r => r.style.opacity = '1');
+}
+
+function normalizeSIPOCBubbles() {
+  const grid = document.querySelector('#modalBody .sipoc-grid');
+  if (!grid) return;
+
+  // Récupérer les 5 colonnes (S, I, P, O, C)
+  const cols = grid.querySelectorAll(':scope > .sipoc-col');
+  if (cols.length < 5) return;
+
+  // Colonnes S, I, O, C (on exclut P = index 2)
+  const siocCols = [cols[0], cols[1], cols[3], cols[4]];
+
+  // 1. Uniformiser la hauteur de toutes les bulles S/I/O/C
+  // — réinitialiser d'abord pour mesurer la hauteur naturelle
+  siocCols.forEach(col => {
+    col.querySelectorAll('.sipoc-bubble').forEach(b => {
+      b.style.height = '';
+      b.style.minHeight = '';
+      b.style.boxSizing = 'border-box';
+    });
+  });
+
+  // — mesurer la hauteur max globale sur toutes les bulles S/I/O/C
+  let maxH = 0;
+  siocCols.forEach(col => {
+    col.querySelectorAll('.sipoc-bubble').forEach(b => {
+      const h = b.getBoundingClientRect().height;
+      if (h > maxH) maxH = h;
+    });
+  });
+
+  // — appliquer la hauteur max à toutes
+  siocCols.forEach(col => {
+    col.querySelectorAll('.sipoc-bubble').forEach(b => {
+      b.style.height = maxH + 'px';
+      b.style.minHeight = maxH + 'px';
+    });
+  });
+
+  // 2. Aligner le top de la 1ère bulle de S/I/O/C
+  // — trouver le offset du header le plus bas (peut varier si le titre wrap)
+  let maxHeaderBottom = 0;
+  siocCols.forEach(col => {
+    const head = col.querySelector('.sipoc-head');
+    if (head) {
+      const b = head.getBoundingClientRect().bottom;
+      if (b > maxHeaderBottom) maxHeaderBottom = b;
+    }
+  });
+
+  siocCols.forEach(col => {
+    const head = col.querySelector('.sipoc-head');
+    const body = col.querySelector('.sipoc-col-body');
+    if (!head || !body) return;
+    const headBottom = head.getBoundingClientRect().bottom;
+    const gap = maxHeaderBottom - headBottom;
+    body.style.paddingTop = (gap > 0 ? gap : 0) + 'px';
+  });
+}
+
+function drawSIPOCLinks(d) {
+  const grid = document.querySelector('#modalBody .sipoc-grid');
+  if (!grid) return;
+  grid.style.position = 'relative';
+
+  let svg = document.getElementById('sipocLinksSVG');
+  if (svg) svg.remove();
+  svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.id = 'sipocLinksSVG';
+  svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5;overflow:visible;';
+  grid.appendChild(svg);
+
+  const defs = document.createElementNS('http://www.w3.org/2000/svg','defs');
+  [['lnk-vert','#2D4A2D'],['lnk-or','#7A5C10']].forEach(([id,col]) => {
+    const m = document.createElementNS('http://www.w3.org/2000/svg','marker');
+    m.setAttribute('id',id); m.setAttribute('markerWidth','6'); m.setAttribute('markerHeight','6');
+    m.setAttribute('refX','5'); m.setAttribute('refY','3'); m.setAttribute('orient','auto');
+    const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+    p.setAttribute('d','M0,0 L0,6 L6,3 z'); p.setAttribute('fill',col);
+    m.appendChild(p); defs.appendChild(m);
+  });
+  svg.appendChild(defs);
+
+  const gridRect = grid.getBoundingClientRect();
+  const lnkData = SIPOC_LINKS[d.id];
+  if (!lnkData) return;
+
+  const cols = grid.querySelectorAll(':scope > .sipoc-col');
+  if (cols.length < 5) return;
+
+  function drawConnectors(fromCol, toCol, links, color, markerId) {
+    const fromBubbles = fromCol.querySelectorAll('.sipoc-bubble');
+    const toBubbles   = toCol.querySelectorAll('.sipoc-bubble');
+    const drawn = new Set();
+    links.forEach(lnk => {
+      const fi = lnk[0];
+      const targets = lnk[1];
+      if (!fromBubbles[fi]) return;
+      const fR = fromBubbles[fi].getBoundingClientRect();
+      const fx = fR.right - gridRect.left;
+      const fy = fR.top + fR.height/2 - gridRect.top;
+      targets.forEach(ti => {
+        if (!toBubbles[ti]) return;
+        const key = `${fi}-${ti}`;
+        if (drawn.has(key)) return;
+        drawn.add(key);
+        const tR = toBubbles[ti].getBoundingClientRect();
+        const tx = tR.left - gridRect.left;
+        const ty = tR.top + tR.height/2 - gridRect.top;
+        const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+        const dy = Math.abs(ty - fy);
+        let pathD;
+        if (dy < 4) {
+          // Même hauteur — ligne droite horizontale
+          pathD = `M${fx},${fy} L${tx},${ty}`;
+        } else {
+          // Hauteurs différentes — ligne brisée à angle droit
+          const mx = (fx + tx) / 2;
+          pathD = `M${fx},${fy} L${mx},${fy} L${mx},${ty} L${tx},${ty}`;
+        }
+        path.setAttribute('d', pathD);
+        path.setAttribute('stroke', color);
+        path.setAttribute('stroke-width', '1.5');
+        path.setAttribute('fill', 'none');
+        path.setAttribute('marker-end', `url(#${markerId})`);
+        path.setAttribute('opacity', '0.75');
+        svg.appendChild(path);
+      });
+    });
+  }
+
+  // S (col 0) → I (col 1) : vert
+  drawConnectors(cols[0], cols[1], lnkData.si, '#2D4A2D', 'lnk-vert');
+  // O (col 3) → C (col 4) : or
+  drawConnectors(cols[3], cols[4], lnkData.oc, '#7A5C10', 'lnk-or');
+}
+
+</script>
+</body>
+</html>
